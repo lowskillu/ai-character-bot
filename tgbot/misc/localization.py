@@ -1,6 +1,6 @@
-"""Локализация текстов для бота"""
+"""Localized texts and option lists (ru / en)."""
 
-# Тексты для кастомизации профиля
+# Character wizard texts
 CUSTOMIZATION_TEXTS = {
     "ru": {
         "profile_preview": "🔍 Вот как сейчас выглядит твой персонаж:",
@@ -66,7 +66,7 @@ CUSTOMIZATION_TEXTS = {
     }
 }
 
-# Кнопки главного меню кастомизации
+# Wizard main-screen buttons
 CUSTOMIZATION_BUTTONS = {
     "ru": {
         "name": "👑 Имя",
@@ -88,7 +88,7 @@ CUSTOMIZATION_BUTTONS = {
     }
 }
 
-# Опции для локации с локализацией
+# Location options
 LOCATION_OPTIONS_LOCALIZED = {
     "ru": [
         ("🍽️ Кафе", "cafe"),
@@ -104,7 +104,7 @@ LOCATION_OPTIONS_LOCALIZED = {
     ]
 }
 
-# Опции для роли с локализацией
+# Role options
 ROLE_OPTIONS_LOCALIZED = {
     "ru": [
         ("🤝 Друг", "friend"),
@@ -123,7 +123,7 @@ ROLE_OPTIONS_LOCALIZED = {
 # tables below are the real shared asset; when the inline branches are finally
 # consolidated, that migration should bring its own accessor.
 
-# --- Appearance (Внешность) ---
+# --- Appearance ---
 APPEARANCE_HAIR_OPTIONS = {
     "ru": [
         ("🤍 Светлые", "light"),
@@ -186,7 +186,7 @@ APPEARANCE_STYLE_VALUE_TO_TEXT = {
     "en": {v: t for t, v in APPEARANCE_STYLE_OPTIONS["en"]}
 }
 
-# --- Build (Телосложение) ---
+# --- Build ---
 BODY_TYPE_OPTIONS = {
     "ru": [
         ("🌿 Худощавое", "slim build"),
@@ -224,7 +224,7 @@ HEIGHT_VALUE_TO_TEXT = {
 
 
 # Personality, Clothing, Location, Role.
-# Russian labels agree with «характер» (masculine noun), so they say nothing
+# Russian labels agree with the noun for "personality" (masculine), so they say nothing
 # about the character's gender.
 PERSONALITY_OPTIONS_RU = [
     ("🤗 Добрый", "Kind"),
@@ -261,7 +261,7 @@ CLOTHING_OPTIONS_EN = [
 ]
 
 
-# Локализованные словари для получения текста по значению
+# value -> label lookups
 PERSONALITY_VALUE_TO_TEXT = {
     "ru": {v: t for t, v in PERSONALITY_OPTIONS_RU},
     "en": {v: t for t, v in PERSONALITY_OPTIONS_EN}
@@ -279,11 +279,11 @@ ROLE_VALUE_TO_TEXT = {
     "en": {v: t for t, v in ROLE_OPTIONS_LOCALIZED["en"]}
 }
 
-# The four *_VALUE_TO_TEXT_RU aliases that stood here "для обратной
-# совместимости" had no callers left; the localized dicts above are used
+# The four *_VALUE_TO_TEXT_RU aliases that stood here "for backwards
+# compatibility" had no callers left; the localized dicts above are used
 # directly.
 
-# Имена персонажей — нейтральные, без указания пола.
+# Character names: gender-neutral.
 CHARACTER_NAMES_EN = [
     "Alex", "Sam", "Robin", "Jordan", "Taylor", "Casey", "Riley", "Morgan", "Jamie", "Charlie",
     "Avery", "Quinn", "Rowan", "Skyler", "Kai", "Ash", "Rio", "Remy", "Sage", "River",

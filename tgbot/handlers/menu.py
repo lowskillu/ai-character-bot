@@ -141,10 +141,10 @@ async def do_language_change(call: CallbackQuery, state: FSMContext, redis=None)
     new_lang = "ru" if call.data == "confirm_language_ru" else "en"
     user_id = call.from_user.id
     try:
-        # 1. Удаляем профили в явной сессии
+        # 1. Delete the profiles in an explicit session
         async with AsyncORM.users._get_session() as session:
             await delete_all_profiles_for_user(session, user_id)
-        # 2. Обновляем язык пользователя (метод сам откроет сессию)
+        # 2. Update the language (the repo opens its own session)
         await AsyncORM.users.update(user_id, language=new_lang)
         await invalidate_user_cache(redis, user_id)
         await state.update_data(language=new_lang)
@@ -210,7 +210,7 @@ async def back_to_main_menu(call: CallbackQuery, state: FSMContext, user: dict =
     user_id = call.from_user.id
     lang = user.get("language", "ru") if user else "ru"
 
-    # Получаем активный профиль
+    # Active profile
     active_profile_id = None
     try:
         # ConfigMiddleware always injects the shared client. The old fallback
@@ -220,10 +220,10 @@ async def back_to_main_menu(call: CallbackQuery, state: FSMContext, user: dict =
         else:
             active_profile_id = await get_active_profile(redis, user_id)
     except Exception as e:
-        logger.error(f"[menu_back_to_dialog] Ошибка получения активного профиля: {e}")
+        logger.error(f"[menu_back_to_dialog] could not read the active profile: {e}")
 
     if active_profile_id:
-        # Получаем имя профиля
+        # Profile name
         try:
             async with AsyncORM.users._get_session() as session:
                 result = await session.execute(
@@ -241,18 +241,18 @@ async def back_to_main_menu(call: CallbackQuery, state: FSMContext, user: dict =
                     await call.message.delete()
                     await call.message.answer(text, parse_mode="Markdown")
                 else:
-                    logger.warning(f"[menu_back_to_dialog] Профиль не найден: user_id={user_id}, profile_id={active_profile_id}")
-                    # Возврат в главное меню, если профиль не найден
+                    logger.warning(f"[menu_back_to_dialog] profile not found: user_id={user_id}, profile_id={active_profile_id}")
+                    # Profile gone: back to the main menu
                     text, keyboard = get_menu_text_and_keyboard(lang)
                     await call.message.delete()
                     await call.message.answer(text, reply_markup=keyboard)
         except Exception as e:
-            logger.error(f"[menu_back_to_dialog] Ошибка при получении профиля: {e}")
+            logger.error(f"[menu_back_to_dialog] could not load the profile: {e}")
             text, keyboard = get_menu_text_and_keyboard(lang)
             await call.message.delete()
             await call.message.answer(text, reply_markup=keyboard)
     else:
-        # Нет активного профиля — возвращаем в главное меню
+        # No active profile: back to the main menu
         text, keyboard = get_menu_text_and_keyboard(lang)
         await call.message.delete()
         await call.message.answer(text, reply_markup=keyboard)
@@ -269,7 +269,7 @@ def _premium_status(level: int, until, lang: str, verbose: bool) -> str:
     """Render the premium line.
 
     Both screens built this by hand, and both keyed off the raw premium_level
-    column, so an expired subscriber was shown "✅ Активен … до <дата в прошлом>".
+    column, so an expired subscriber was shown "✅ Active … until <a date in the past>".
     `level` here is already expiry-adjusted, so an expired grant reads Inactive.
     """
     if level < 1:
@@ -402,11 +402,11 @@ async def menu_reset_confirm_handler(call: CallbackQuery, state: FSMContext, use
     lang = user.get("language", "ru") if user else "ru"
     async with AsyncORM.transaction():
         session = session_context.get()
-        # Удалить профили (Profile)
+        # Delete the profiles
         await delete_all_profiles_for_user(session, user_id)
-        # Удалить историю сообщений профиля
+        # Delete the chat history
         await AsyncORM.profile_message_history.delete_all_by_user(user_id=user_id)
-        # Сбросить язык, стиль, соглашение (но НЕ премиум)
+        # Reset language, style and agreement (but NOT premium)
         await AsyncORM.users.update(user_id, language=None, style="anime", is_agreement_accepted=None)
     await invalidate_user_cache(redis, user_id)
     text = (
@@ -423,9 +423,7 @@ async def menu_reset_confirm_handler(call: CallbackQuery, state: FSMContext, use
 
 @menu_router.callback_query(F.data == "menu_stats")
 async def menu_stats_handler(call: CallbackQuery, state: FSMContext, user: dict = None, redis=None):
-    """
-    Показывает статистику пользователя: премиум-статус, лимиты и использование фото/сообщений.
-    """
+    """Stats screen: premium status, picture and message usage."""
     user_id = call.from_user.id
     lang = user.get("language", "ru") if user else "ru"
     if redis is None:
@@ -435,7 +433,7 @@ async def menu_stats_handler(call: CallbackQuery, state: FSMContext, user: dict 
     try:
         premium_level, premium_until = await _read_premium(user_id)
         premium_str = _premium_status(premium_level, premium_until, lang, verbose=True)
-        # Фото: usage и лимит. Limits come from tgbot/services/quotas.py so this
+        # Pictures: usage and limit. Limits come from tgbot/services/quotas.py so this
         # screen cannot drift away from what the photo handler actually enforces.
         photo_used, photo_limit = await quotas.get_usage(redis, user_id, premium_level)
         # Both counters now come from the same Redis keys the handlers spend, so
@@ -449,7 +447,7 @@ async def menu_stats_handler(call: CallbackQuery, state: FSMContext, user: dict 
         else:
             photo_str = f"{photo_used}/{photo_limit} использовано (навсегда)" if lang == "ru" else f"{photo_used}/{photo_limit} used (forever)"
             msg_str = f"{msg_count}/{msg_limit} использовано (навсегда)" if lang == "ru" else f"{msg_count}/{msg_limit} used (forever)"
-        # Текст статистики
+        # Stats text
         if lang == "ru":
             text = (
                 "📊 Статистика\n\n"
@@ -467,7 +465,7 @@ async def menu_stats_handler(call: CallbackQuery, state: FSMContext, user: dict 
         contact = support_line(lang, "Для покупки премиума напишите", "To buy premium, write to")
         if contact:
             text += "\n\n" + contact
-        # Кнопка назад
+        # Back button
         markup = InlineKeyboardMarkup(
             inline_keyboard=[
                 [InlineKeyboardButton(text="🔙 Назад" if lang == "ru" else "🔙 Back", callback_data="back_to_menu")],
@@ -480,7 +478,7 @@ async def menu_stats_handler(call: CallbackQuery, state: FSMContext, user: dict 
                 raise
         await call.answer()
     except Exception as e:
-        logger.error(f"menu_stats_handler: Ошибка при получении статистики для user_id={user_id}: {e}")
+        logger.error(f"menu_stats_handler: could not load stats for user_id={user_id}: {e}")
         await call.answer("Ошибка при получении статистики." if lang == "ru" else "Error getting statistics.", show_alert=True)
 
 @menu_router.callback_query(F.data == "edit_profile")
@@ -499,7 +497,7 @@ async def edit_profile_menu(call: CallbackQuery, state: FSMContext, user: dict =
             raise
     await call.answer()
 
-# Обработчик выбора профиля для редактирования
+# Pick a profile to edit
 @menu_router.callback_query(F.data.regexp(r"^edit_profile_select_(\d+)$"))
 async def start_edit_profile(call: CallbackQuery, state: FSMContext, user: dict = None):
     match = re.match(r"^edit_profile_select_(\d+)$", call.data or "")
@@ -508,9 +506,9 @@ async def start_edit_profile(call: CallbackQuery, state: FSMContext, user: dict 
         return
     profile_id = int(match.group(1))
     await state.update_data(editing_profile_id=profile_id)
-    # Запускаем кастомизацию через кастомный state
+    # Enter the wizard state
     await state.set_state(ProfileCustomizationState.customizing)
-    # Передаём управление кастомизации (пусть кастомизация сама заберёт editing_profile_id из state)
+    # Hand over to the wizard; it reads editing_profile_id from the state
     from tgbot.handlers.customization import start_profile_customization
     await start_profile_customization(call, state, user)
     await call.answer() 

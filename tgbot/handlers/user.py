@@ -1,6 +1,6 @@
 from contextlib import suppress
 from aiogram import F, Router
-from aiogram.filters import StateFilter # Добавляем StateFilter
+from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message, InlineKeyboardMarkup, InlineKeyboardButton
 import logging
@@ -101,22 +101,22 @@ async def user_start(message: Message, state: FSMContext, user: dict = None):
     lang = user.get("language")
     is_agreement_accepted = user.get("is_agreement_accepted", False)
 
-    # Если язык уже выбран
+    # Language already chosen
     if lang:
-        # Если пользователь уже принял соглашение
+        # Agreement already accepted
         if is_agreement_accepted:
             await message.answer(
                 get_ready_to_start_text(lang),
                 reply_markup=get_ready_to_start_keyboard(lang),
             )
         else:
-            # Отправить соглашение
+            # Show the agreement
             await message.answer(
                 get_start_message_text(lang), reply_markup=get_agreement_keyboard(lang)
             )
         return
 
-    # Если язык не выбран — показать меню выбора языка
+    # No language yet: show the language picker
     await message.answer(CHOOSE_LANGUAGE_TEXT, reply_markup=get_language_choice_keyboard())
 
 @user_router.callback_query(F.data == "profile_delete")
@@ -159,7 +159,7 @@ async def start_profile_deletion(call: CallbackQuery, state: FSMContext, user: d
     await call.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=keyboard))
     await call.answer()
 
-@user_router.callback_query(F.data.regexp(r"^profile_delete_(\d+)$", flags=re.IGNORECASE)) # Исправлено: flags=re.IGNORECASE
+@user_router.callback_query(F.data.regexp(r"^profile_delete_(\d+)$", flags=re.IGNORECASE))
 async def confirm_profile_deletion(call: CallbackQuery, state: FSMContext, user: dict = None, redis=None):
     user = user or {}
     match = re.match(r"^profile_delete_(\d+)$", call.data or "")
@@ -171,35 +171,35 @@ async def confirm_profile_deletion(call: CallbackQuery, state: FSMContext, user:
     lang = user.get("language", "ru")
     
     try:
-        if AsyncORM.users is None: # Добавляем проверку на None
+        if AsyncORM.users is None:
             logger.error("[confirm_profile_deletion] AsyncORM.users is not initialized!")
             await call.answer("Внутренняя ошибка: не удалось получить доступ к базе данных. Попробуйте позже.", show_alert=True)
             return
         async with AsyncORM.users._get_session() as session:
-            # Проверяем существование профиля
+            # The profile must exist and belong to this user
             profiles = await get_user_profiles(session, user_id)
             profile = next((p for p in profiles if p.id == profile_id), None)
             
             if not profile:
-                await call.answer("Профиль не найден" if lang == "ru" else "Profile not found", show_alert=True)
+                await call.answer("Profile not found" if lang == "ru" else "Profile not found", show_alert=True)
                 return
                 
-            # Удаляем профиль
+            # Delete it
             await delete_profile(session, user_id, profile_id)
             
-            # Получаем обновленный список профилей
+            # Fresh list of profiles
             profiles = await get_user_profiles(session, user_id)
             premium = await is_premium(session, user_id)
             profile_buttons = [(p.id, p.name) for p in profiles]
             
-        # Если это был активный профиль, очищаем его
+        # If it was the active profile, clear the pointer
         data = await state.get_data()
         if data.get("active_profile_id") == profile_id:
             await state.update_data(active_profile_id=None)
             if redis:
                 await set_active_profile(redis, user_id, None)
         
-        # Показываем обновленное меню профилей
+        # Show the updated profile menu
         text = (
             "Профиль успешно удален!\n\n"
             "🧑‍🤝‍🧑 Твои персонажи\n"
@@ -251,7 +251,7 @@ async def handle_text_with_profile(message: Message, state: FSMContext, user: di
         return
 
     # Message allowance. The premium and stats screens have always advertised
-    # "25 сообщений/навсегда" and "200/день", but nothing enforced either, so
+    # "25 messages, lifetime" and "200 per day", but nothing enforced either, so
     # the free tier was in practice unlimited paid LLM calls.
     premium_level = (user or {}).get("premium_level", 0) or 0
     # Three outcomes, not two. `reserved` must track whether a slot was actually
@@ -364,17 +364,17 @@ async def _run_chat_turn(
 # profile-creation wizard — customization.py's text input was unreachable.
 
 async def generate_chat_response(user_id, text, lang, profile_name, profile_description_for_ai, history):
-    # Теперь base_prompt формируется с использованием profile_description_for_ai
+    # The system prompt embeds the serialized profile
     base_prompt = generate_chat_prompt(profile_name, profile_description_for_ai, lang)
-    # Формируем messages для OpenRouter API
+    # Messages for the OpenRouter API
     messages = []
     messages.append({"role": "system", "content": base_prompt})
-    # История: [{'role': 'user'/'bot', 'text': ...}]
+    # History: [{'role': 'user'/'bot', 'text': ...}]
     for msg in history[-openrouter.MAX_HISTORY_LENGTH:]:
         role = msg["role"]
         content = msg["text"]
         messages.append({"role": "assistant" if role == "bot" else role, "content": content})
-    # Текущее сообщение пользователя
+    # The current message
     messages.append({"role": "user", "content": text})
     payload = {
         "model": openrouter.CHAT_MODEL,
@@ -404,10 +404,10 @@ async def generate_chat_response(user_id, text, lang, profile_name, profile_desc
 # lived in Postgres since load_chat_context, not in the FSM.
 
 def escape_markdown_v2(text: str) -> str:
-    """Экранирует спецсимволы для MarkdownV2 (aiogram 3.x)."""
+    """Escape MarkdownV2 special characters (aiogram 3.x)."""
     # The backslash must be escaped first, and it was missing entirely: a single
     # backslash in the model's output left a dangling escape, Telegram rejected
-    # the message with a 400, and the user saw only "Ошибка генерации ответа".
+    # the message with a 400, and the user saw only "Failed to generate response".
     text = text.replace('\\', '\\\\')
     symbols = r'_[]()~`>#+-=|{}.!*'
     for s in symbols:
@@ -418,10 +418,10 @@ def escape_markdown_v2(text: str) -> str:
 async def handle_language_choice(call: CallbackQuery, state: FSMContext, redis=None):
     lang = "en" if call.data == "lang_en" else "ru"
     user_id = call.from_user.id
-    # Сохраняем язык в БД
+    # Save the language
     await AsyncORM.users.update(user_id, language=lang)
     await invalidate_user_cache(redis, user_id)
-    # Сохраняем язык в FSM (БД обновим после подтверждения)
+    # Also keep it in the FSM for the next screens
     await state.update_data(language=lang)
     text = LANGUAGE_SELECTED_TEXT_EN.format(language="English") if lang == "en" else LANGUAGE_SELECTED_TEXT_RU.format(language="Русский")
     keyboard = choose_lang_continue_menu(lang)
@@ -438,14 +438,14 @@ async def handle_lang_confirm(call: CallbackQuery, state: FSMContext):
 
 @user_router.callback_query(F.data == "lang_change")
 async def handle_lang_change(call: CallbackQuery, state: FSMContext):
-    # Возвращаем к выбору языка (как в user_start)
+    # Back to the language picker (same as in user_start)
     await show_screen(call, CHOOSE_LANGUAGE_TEXT, get_language_choice_keyboard())
 
 @user_router.callback_query(F.data == "agreement_accept")
 async def handle_agreement_accept(call: CallbackQuery, state: FSMContext, redis=None):
     lang = (await state.get_data()).get("language", "ru")
     user_id = call.from_user.id
-    # Обновляем флаг согласия в БД
+    # Store the agreement flag
     await AsyncORM.users.update(user_id, is_agreement_accepted=True)
     await invalidate_user_cache(redis, user_id)
     await show_screen(

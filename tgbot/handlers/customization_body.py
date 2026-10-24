@@ -12,7 +12,7 @@ customization_body_router = Router()
 
 
 def get_body_main_keyboard(lang="ru"):
-    """Создает главную клавиатуру для настройки телосложения"""
+    """Main keyboard of the build screen."""
     if lang == "ru":
         rows = [
     [InlineKeyboardButton(text="📐 Телосложение", callback_data="body_type")],
@@ -28,7 +28,7 @@ def get_body_main_keyboard(lang="ru"):
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 def get_body_option_keyboard(options, selected=None, lang="ru"):
-    """Универсальная функция для создания клавиатуры выбора телосложения и роста"""
+    """Option keyboard for build or height."""
     rows = []
     for text, value in options:
         display = text
@@ -41,7 +41,7 @@ def get_body_option_keyboard(options, selected=None, lang="ru"):
 
 @customization_body_router.callback_query(F.data == "customize_body")
 async def handle_customize_body(call: CallbackQuery, state: FSMContext): 
-    """Главное меню настройки телосложения"""
+    """Main build screen."""
     lang = (await state.get_data()).get("language", "ru")
     text = (
         "📐 Телосложение персонажа\n\n"
@@ -88,13 +88,13 @@ async def _show_body_options(call: CallbackQuery, state: FSMContext, field: str)
 
 @customization_body_router.callback_query(F.data.in_(set(BODY_FIELDS)))
 async def handle_body_field(call: CallbackQuery, state: FSMContext):
-    """Показывает выбор для одного параметра телосложения."""
+    """Show the options for one build field."""
     await _show_body_options(call, state, call.data)
 
 
 @customization_body_router.callback_query(F.data.startswith("body_choose_"))
 async def handle_body_choose(call: CallbackQuery, state: FSMContext):
-    """Обработка выбора параметра телосложения.
+    """Store a build or height choice.
 
     Reads the FSM state once. The previous version awaited state.get_data()
     six times for a single button press, each one a Redis round trip.
@@ -117,10 +117,10 @@ async def handle_body_choose(call: CallbackQuery, state: FSMContext):
 
 @customization_body_router.callback_query(F.data == "body_main")
 async def handle_body_main(call: CallbackQuery, state: FSMContext):
-    """Возврат к главному меню телосложения"""
+    """Back to the build screen."""
     await handle_customize_body(call, state)
 
 @customization_body_router.callback_query(F.data == "body_back")
 async def handle_body_back(call: CallbackQuery, state: FSMContext):
-    """Возврат к главному меню кастомизации"""
+    """Back to the wizard's main screen."""
     await show_customization_menu(call, state)

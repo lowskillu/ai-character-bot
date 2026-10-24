@@ -21,15 +21,15 @@ class User(Base):
     # /addpremium looks users up by name.
     username: Mapped[Optional[str]] = mapped_column(index=True, nullable=True)
     registered_at: Mapped[created_at]
-    language: Mapped[Optional[str]] = mapped_column(nullable=True, default="ru")  # Язык пользователя
-    is_agreement_accepted: Mapped[Optional[bool]] = mapped_column(nullable=True, default=False)  # Согласие с соглашением
-    welcome_sent: Mapped[bool] = mapped_column(Boolean, default=False)  # Приветствие отправлено
-    style: Mapped[str] = mapped_column(default="anime")  # Стиль изображений пользователя
-    premium_level: Mapped[int] = mapped_column(default=0)  # 0 — обычный, 1+ — премиум уровни
-    premium_until: Mapped[Optional[datetime.datetime]] = mapped_column(nullable=True)  # Дата окончания премиума
-    photo_time: Mapped[Optional[str]] = mapped_column(nullable=True) # Время суток для фото
-    photo_skin: Mapped[Optional[str]] = mapped_column(nullable=True) # Обработка портрета для фото
-    photo_light: Mapped[Optional[str]] = mapped_column(nullable=True) # Освещение для фото
+    language: Mapped[Optional[str]] = mapped_column(nullable=True, default="ru")  # User's language
+    is_agreement_accepted: Mapped[Optional[bool]] = mapped_column(nullable=True, default=False)  # User agreement accepted
+    welcome_sent: Mapped[bool] = mapped_column(Boolean, default=False)  # Welcome message sent
+    style: Mapped[str] = mapped_column(default="anime")  # Image style
+    premium_level: Mapped[int] = mapped_column(default=0)  # 0 = free, 1+ = premium levels
+    premium_until: Mapped[Optional[datetime.datetime]] = mapped_column(nullable=True)  # Premium expiry
+    photo_time: Mapped[Optional[str]] = mapped_column(nullable=True) # Time of day for pictures
+    photo_skin: Mapped[Optional[str]] = mapped_column(nullable=True) # Picture finish (natural / soft)
+    photo_light: Mapped[Optional[str]] = mapped_column(nullable=True) # Lighting for pictures
 
 
 class Profile(Base):
@@ -40,16 +40,16 @@ class Profile(Base):
     user_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
-    name: Mapped[str] = mapped_column(nullable=True)  # Имя профиля
-    style: Mapped[str] = mapped_column(default="anime")  # Стиль профиля
-    description: Mapped[str] = mapped_column(nullable=True)  # Общее описание
-    appearance: Mapped[str] = mapped_column(nullable=True)  # Внешность
-    body_type: Mapped[str] = mapped_column(nullable=True)  # Телосложение и рост
-    clothing: Mapped[str] = mapped_column(nullable=True)  # Одежда
-    personality: Mapped[str] = mapped_column(nullable=True)  # Характер
-    location: Mapped[str] = mapped_column(nullable=True)  # Локация (сцена)
-    role: Mapped[str] = mapped_column(nullable=True)  # Роль
-    reference_photo_url: Mapped[Optional[str]] = mapped_column(nullable=True)  # Ссылка на эталонное фото для IP-Adapter
+    name: Mapped[str] = mapped_column(nullable=True)  # Character name
+    style: Mapped[str] = mapped_column(default="anime")  # Image style of this character
+    description: Mapped[str] = mapped_column(nullable=True)  # Free-form description
+    appearance: Mapped[str] = mapped_column(nullable=True)  # Appearance (JSON)
+    body_type: Mapped[str] = mapped_column(nullable=True)  # Build and height (JSON)
+    clothing: Mapped[str] = mapped_column(nullable=True)  # Clothing
+    personality: Mapped[str] = mapped_column(nullable=True)  # Personality
+    location: Mapped[str] = mapped_column(nullable=True)  # Location (scene)
+    role: Mapped[str] = mapped_column(nullable=True)  # Role
+    reference_photo_url: Mapped[Optional[str]] = mapped_column(nullable=True)  # Reference picture URL (IP-Adapter)
     created_at: Mapped[created_at]
 
 
@@ -76,6 +76,6 @@ class ProfileMessageHistory(Base):
     profile_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("profiles.id", ondelete="CASCADE")
     )
-    role: Mapped[str] = mapped_column()  # 'user' или 'bot'
+    role: Mapped[str] = mapped_column()  # 'user' or 'bot'
     text: Mapped[str] = mapped_column()
     created_at: Mapped[created_at]

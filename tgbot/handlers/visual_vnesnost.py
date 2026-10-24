@@ -75,7 +75,7 @@ def get_appearance_main_keyboard(lang):
 def get_appearance_option_keyboard(options, selected=None, back_cb="customize_appearance", lang="ru"):
     """Render the option grid.
 
-    The old signature took a ``saved`` flag and appended a "💾 Сохранить" button
+    The old signature took a ``saved`` flag and appended a "💾 Save" button
     when it was false — but all four call sites passed ``saved=True``, so the
     button was never rendered and ``handle_appearance_save`` was unreachable.
     That handler was also broken: it read the selection from top-level FSM data

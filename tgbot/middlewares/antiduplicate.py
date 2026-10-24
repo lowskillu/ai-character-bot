@@ -24,11 +24,11 @@ class AntiDuplicateMiddleware(BaseMiddleware):
         event: Update,
         data: Dict[str, Any],
     ) -> Any:
-        # Если Redis недоступен, пропускаем проверку
+        # No Redis: skip the check
         if not self.redis:
             return await handler(event, data)
             
-        # Фильтруем только raw Update, иначе пропускаем
+        # Only raw updates are checked
         if not isinstance(event, Update):
             return await handler(event, data)
             

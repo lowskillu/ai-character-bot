@@ -1,7 +1,7 @@
 """Message allowance on the chat path.
 
-The premium and stats screens have advertised "25 сообщений/навсегда" and
-"200/день" since the beginning, but nothing enforced either number: the free
+The premium and stats screens have advertised "25 messages, lifetime" and
+"200 per day" since the beginning, but nothing enforced either number: the free
 tier was in practice an unlimited supply of paid LLM calls. These tests pin
 both halves of the contract — the limit stops the user, and a turn that never
 reached them is not charged for.

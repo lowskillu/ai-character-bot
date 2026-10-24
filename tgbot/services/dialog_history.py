@@ -30,7 +30,7 @@ async def set_profile_history(state, profile_id: int, history: list):
     )
 
 
-# --- работа с историей в БД ---
+# --- history in the database ---
 
 async def save_profile_message(session, user_id: int, profile_id: int, role: str, text: str):
     """Append one row. Trimming is a separate call — see :func:`trim_profile_history`.
@@ -92,12 +92,12 @@ async def get_profile_history_from_db(session, user_id: int, profile_id: int, li
     )
     result = await session.execute(q)
     rows = result.all()
-    # Возвращаем в порядке от старых к новым
+    # Oldest first
     return [{"role": r, "text": t} for r, t in reversed(rows)]
 
 
 async def delete_old_profile_messages(session):
-    """Удаляет сообщения старше RETENTION_DAYS дней из истории профиля."""
+    """Delete history rows older than RETENTION_DAYS."""
     threshold = datetime.utcnow() - timedelta(days=RETENTION_DAYS)
     await session.execute(
         delete(ProfileMessageHistory).where(ProfileMessageHistory.created_at < threshold)

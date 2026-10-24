@@ -1,152 +1,156 @@
-# Нагрузочные тесты
+# Load tests
 
-Стенд, результаты и найденные дефекты. Прогоны от 2026-08-07/08.
+Test bench, results and the defects they found. Runs from 2026-08-07/08.
 
-## Первый тест: синхронная версия
+## First test: the synchronous version
 
-Первая версия бота обрабатывала апдейты синхронно: пока один апдейт ждал
-ответа (базы или модели), все остальные стояли в очереди.
+The first version of the bot processed updates synchronously: while one update
+was waiting for a response (from the database or the model), all the others
+waited in line.
 
-Для проверки я использовал сторонний сервис, который отправил боту
-около 6 000 команд `/start` с разных аккаунтов.
+To test it I used a third-party traffic service that sent the bot about 6,000
+`/start` commands from different accounts.
 
-| версия | время обработки 6 000 `/start` |
+| version | time to process 6,000 `/start` |
 |---|---|
-| синхронная | около 4 часов |
-| асинхронная (aiohttp) | около 3 минут |
+| synchronous | about 4 hours |
+| asynchronous (aiohttp) | about 3 minutes |
 
-В синхронной версии бот не падал и почти не грузил CPU (до 3 %), просто
-каждый запрос ждал предыдущий. Мой собственный `/start`, отправленный
-во время теста, получил ответ примерно через 4 часа.
+The synchronous version did not crash and barely used the CPU (up to 3 %);
+every request simply waited for the previous one. My own `/start`, sent during
+the test, got a reply after about 4 hours.
 
-Результат асинхронной версии упирался в ресурсы моей машины и в скорость
-сервиса, а не в код бота. Поэтому дальше я перешёл на воспроизводимые
-тесты со стабами, описанные ниже.
+The asynchronous result was limited by my machine's resources and the speed of
+the service, not by the bot's code. That is why I moved on to the reproducible
+stub-based tests described below.
 
-## Стенд
+## Test bench
 
-| Компонент | Что использовано |
+| Component | What was used |
 |---|---|
-| Postgres | `postgres:16-alpine` в Docker, схема через `alembic upgrade head` |
-| Redis | `redis:7-alpine` в Docker |
-| Telegram Bot API | стаб ([tests/load/stubs.py](../tests/load/stubs.py)), задержка 20–50 мс |
-| OpenRouter | стаб, `lognormal(1.6, 0.6)` — медиана ≈5 с, p99 ≈20 с |
-| Драйвер | [tests/load/driver.py](../tests/load/driver.py), постоянная интенсивность |
+| Postgres | `postgres:16-alpine` in Docker, schema via `alembic upgrade head` |
+| Redis | `redis:7-alpine` in Docker |
+| Telegram Bot API | stub ([tests/load/stubs.py](../tests/load/stubs.py)), 20–50 ms latency |
+| OpenRouter | stub, `lognormal(1.6, 0.6)` — median ≈5 s, p99 ≈20 s |
+| Driver | [tests/load/driver.py](../tests/load/driver.py), constant arrival rate |
 | Ramp | [tests/load/breakpoint.py](../tests/load/breakpoint.py) |
 
-Драйвер работает по **открытой модели** — держит заданную интенсивность независимо
-от того, насколько бот замедлился. Закрытая модель придушила бы себя сама и
-скрыла ровно тот backpressure, который измеряется.
+The driver uses an **open model**: it keeps the target rate no matter how much
+the bot slows down. A closed model would throttle itself and hide exactly the
+backpressure being measured.
 
-Стаб Bot API служит точкой измерения: он фиксирует момент `sendMessage`, то есть
-когда пользователь реально увидел бы ответ.
+The Bot API stub is the measurement point: it records the moment of
+`sendMessage`, which is when the user would actually have seen the reply.
 
-**Всё крутится на одной машине** — бот, оба стаба, драйвер и обе базы делят
-20 ядер. На верхних ступенях драйвер конкурирует с ботом за CPU, поэтому числа
-пессимистичнее реальности на выделенном сервере.
+**Everything runs on one machine** — the bot, both stubs, the driver and both
+databases share 20 cores. At the top steps the driver competes with the bot for
+CPU, so the numbers are more pessimistic than a dedicated server would give.
 
-## Целевой сценарий: 200 юзеров, 8 сообщ/с
+## Target scenario: 200 users, 8 msg/s
 
 ```
-960 апдейтов → 960 ответов (100 %), 0 ошибок
-p50 5.05 с при медиане стаба LLM 5.0 с — бот добавляет ~50 мс
-соединений к Postgres: максимум 6 из пула в 10
+960 updates → 960 replies (100 %), 0 errors
+p50 5.05 s against a 5.0 s LLM stub median — the bot adds ~50 ms
+Postgres connections: at most 6 of a pool of 10
 idle in transaction: max 0
 ```
 
-Отдельно проверено, что тест **способен поймать обратное**: с возвращённой
-дореформенной формой (сессия БД удерживается через вызов LLM) та же нагрузка
-дала 396/480 доставленных, 564 ошибки пула и 20 соединений, припаркованных
-в открытых транзакциях.
+It was also checked that the test **can catch the opposite**: with the old
+shape restored (a DB session held across the LLM call) the same load gave
+396/480 delivered, 564 pool errors and 20 connections parked in open
+transactions.
 
-## Ramp до отказа
+## Ramp to failure
 
-Два прогона одного ramp'а. Разница профилей важна и объясняет расхождение:
+Two runs of the same ramp. The difference between the profiles matters and
+explains the gap:
 
-**Возвращающиеся пользователи** (500 юзеров шлют повторно):
+**Returning users** (500 users sending repeatedly):
 
-| нагрузка | доставка | p50 | pg | idle_tx |
+| load | delivered | p50 | pg | idle_tx |
 |---|---|---|---|---|
-| 8/с | 100 % | 6.02 | 4 | 1 |
-| 24/с | 100 % | 9.76 | 6 | 1 |
-| 48/с | 100 % | 10.63 | 10 | 0 |
-| 96/с | 100 % | 10.67 | 18 | 5 |
-| 160/с | **100 %** | 10.87 | 19 | 14 |
+| 8/s | 100 % | 6.02 | 4 | 1 |
+| 24/s | 100 % | 9.76 | 6 | 1 |
+| 48/s | 100 % | 10.63 | 10 | 0 |
+| 96/s | 100 % | 10.67 | 18 | 5 |
+| 160/s | **100 %** | 10.87 | 19 | 14 |
 
-**Точки отказа не найдено до 160 сообщ/с — это 20× от цели.**
+**No breaking point found up to 160 msg/s — 20× the target.**
 
-**Все пользователи новые** (`--unique-users`, каждое сообщение — регистрация):
+**All users new** (`--unique-users`, every message is a registration):
 
-| нагрузка | доставка | p50 | pg | idle_tx |
+| load | delivered | p50 | pg | idle_tx |
 |---|---|---|---|---|
-| 8/с | 100 % | 5.44 | 6 | 0 |
-| 24/с | 100 % | 4.94 | 7 | 2 |
-| 48/с | 100 % | 5.16 | 21 | 12 |
-| 96/с | **66 %** | 9.83 | 22 | 18 |
-| 160/с | **39 %** | 12.75 | 21 | 18 |
+| 8/s | 100 % | 5.44 | 6 | 0 |
+| 24/s | 100 % | 4.94 | 7 | 2 |
+| 48/s | 100 % | 5.16 | 21 | 12 |
+| 96/s | **66 %** | 9.83 | 22 | 18 |
+| 160/s | **39 %** | 12.75 | 21 | 18 |
 
-Здесь p50 держится на медиане LLM до 48/с — бот не добавляет к ответу модели
-ничего измеримого. Отказ начинается на 96/с, и упирается он в **пул Postgres**:
-новый пользователь — это get-or-create, то есть INSERT, а не SELECT.
+Here p50 stays at the LLM median up to 48/s — the bot adds nothing measurable
+to the model's response time. Failure starts at 96/s, and the limit is the
+**Postgres pool**: a new user is a get-or-create, i.e. an INSERT, not a SELECT.
 
-**Практический вывод:** узкое место не в обычном трафике, а в **волне
-регистраций** — первом дне после релиза. Кэш пользователя там не помогает по
-построению, лечится размером пула. Смотреть на `db_pool_checked_out` в
+**Practical takeaway:** the bottleneck is not regular traffic but a
+**registration wave** — the first day after a release. The user cache cannot
+help there by design; the fix is pool size. Watch `db_pool_checked_out` in
 `/metrics`.
 
-## Найденные дефекты
+## Defects found
 
-### 1. Тишина вместо ответа при отказе инфраструктуры
+### 1. Silence instead of a reply when infrastructure fails
 
-На 96/с **34 % пользователей не получили ничего** — ни ответа, ни сообщения об
-ошибке, при нулевых HTTP-ошибках. `load_chat_context` вызывался без перехвата:
-таймаут пула уходил наверх мимо хендлера, aiogram писал в лог, и на этом всё.
+At 96/s **34 % of users got nothing at all** — neither a reply nor an error
+message, with zero HTTP errors. `load_chat_context` was called without a
+handler: the pool timeout propagated past the handler, aiogram logged it, and
+that was it.
 
-Молчание — худший исход: пользователь не понимает, ждать или повторить, и
-повторяет, добавляя нагрузку ровно тогда, когда её нечем принять. Исправлено в
-трёх местах, включая `DatabaseMiddleware`, где таймаут прерывал апдейт **до**
-запуска любого хендлера.
+Silence is the worst outcome: the user cannot tell whether to wait or retry,
+so they retry, adding load exactly when there is no capacity for it. Fixed in
+three places, including `DatabaseMiddleware`, where the timeout aborted the
+update **before** any handler ran.
 
-### 2. Неограниченный рост пула Redis
+### 2. Unbounded Redis pool growth
 
-redis-py оставляет `max_connections` фактически безлимитным и открывает сокет на
-каждую параллельную команду. На 160 сообщ/с это дало **993 открытых соединения**
-при дефолтном `maxclients` в 10000 и стоимости памяти с обеих сторон.
+redis-py leaves `max_connections` effectively unlimited and opens a socket for
+every concurrent command. At 160 msg/s that meant **993 open connections**,
+against a default `maxclients` of 10000 and a memory cost on both ends.
 
-После ограничения пула: **993 → 201**.
+After bounding the pool: **993 → 201**.
 
-### 3. Двухсекундный таймаут Redis положил бота молча
+### 3. A two-second Redis timeout silently took the bot down
 
-Добавленный «по учебнику» `socket_connect_timeout=2` не оставил запаса: на хосте,
-где установка соединения занимала ~2.05 с (переход IPv6 → IPv4), **все** операции
-с Redis падали. А поскольку вебхук подтверждает приём до обработки, бот отвечал
-200 на каждый апдейт и терял все.
+A textbook `socket_connect_timeout=2` left no margin: on a host where opening a
+connection took ~2.05 s (IPv6 → IPv4 fallback), **every** Redis operation
+failed. And because the webhook acknowledges before processing, the bot
+answered 200 to every update and lost all of them.
 
-Замер по вариантам:
+Measured variants:
 
-| настройка | результат |
+| setting | result |
 |---|---|
-| без таймаутов | OK (2.05 с) |
+| no timeouts | OK (2.05 s) |
 | `connect_timeout=2` | **FAIL** |
 | `connect_timeout=5` | OK |
 | `socket_timeout=2` | **FAIL** |
-| смягчённое до 5 с | OK |
+| relaxed to 5 s | OK |
 
-Команды Redis сами по себе субмиллисекундные, так что щедрый потолок ничего не
-стоит и ловит только по-настоящему зависшее соединение. `/healthz` этот отказ
-детектирует — в этом и был смысл эндпоинта.
+Redis commands themselves are sub-millisecond, so a generous ceiling costs
+nothing and only catches a genuinely hung connection. `/healthz` detects this
+failure — which was the point of the endpoint.
 
-## Что не проверено
+## Not tested
 
-- **Путь генерации фото не тестировался под нагрузкой вообще.** Нужен стаб
-  Runware (их websocket-протокол). Семафор на 8 параллельных генераций взят из
-  головы и под реальные лимиты Runware не подбирался.
-- Стабы моделируют задержки, но не 429, не обрывы и не вариативность модели.
-- Прогоны по 30 секунд. Утечки, проявляющиеся за часы, так не ловятся.
-- `http_errors` на 160/с (~1000) — почти наверняка предел приёма соединений на
-  стороне стенда, а не бота.
+- **The picture generation path was not load-tested at all.** It needs a
+  Runware stub (their websocket protocol). The limit of 8 parallel generations
+  is a guess, not tuned to Runware's real limits.
+- The stubs model latency, but not 429s, dropped connections or model
+  variability.
+- Runs last 30 seconds. Leaks that show up over hours are not caught this way.
+- `http_errors` at 160/s (~1000) is almost certainly the test bench's
+  connection-accept limit, not the bot's.
 
-## Как повторить
+## How to reproduce
 
 ```bash
 docker run -d --name loadtest-pg -e POSTGRES_DB=migtest -e POSTGRES_USER=migtest -e POSTGRES_PASSWORD=migtest -p 127.0.0.1:5432:5432 postgres:16-alpine
@@ -157,10 +161,10 @@ python bot.py
 python -m tests.load.breakpoint
 ```
 
-Боту нужны `TELEGRAM_API_BASE=http://127.0.0.1:8099`,
+The bot needs `TELEGRAM_API_BASE=http://127.0.0.1:8099`,
 `OPENROUTER_API_URL=http://127.0.0.1:8098/chat/completions`, `WEBHOOK_PORT=8080`
-и **заведомо фальшивый `BOT_TOKEN`** — иначе `set_webhook` уведёт боевой трафик
-Telegram на машину, где идёт тест.
+and a **deliberately fake `BOT_TOKEN`** — otherwise `set_webhook` would point
+real Telegram traffic at the test machine.
 
-Для измерения ёмкости (а не сброса нагрузки) поднимите `LLM_CONCURRENCY` выше,
-чем `rate × median_latency`.
+To measure capacity (rather than load shedding), raise `LLM_CONCURRENCY` above
+`rate × median_latency`.

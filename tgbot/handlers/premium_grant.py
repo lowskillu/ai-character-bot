@@ -24,18 +24,18 @@ logger = logging.getLogger(__name__)
 @premium_router.message(Command("addpremium"))
 async def add_premium_handler(message: Message, config: Config = None, redis=None, **data):
     """
-    /addpremium <уровень> <username> <дни>
-    Только для админов (id берутся из .env).
+    /addpremium <level> <username|id> <days>
+    Admins only (ids come from ADMINS in .env).
     """
     admin_ids = set(config.tg_bot.admin_ids) if config else set()
     if message.from_user.id not in admin_ids:
-        await message.answer("⛔️ Нет доступа.")
+        await message.answer("⛔️ Access denied.")
         return
 
     args = (message.text or "").split()
     if len(args) != 4:
         await message.answer(
-            "Использование: /addpremium <уровень> <username|id> <дни>"
+            "Usage: /addpremium <level> <username|id> <days>"
         )
         return
 
@@ -44,7 +44,7 @@ async def add_premium_handler(message: Message, config: Config = None, redis=Non
         level = int(level_raw)
         days = int(days_raw)
     except ValueError:
-        await message.answer("Уровень и дни должны быть числами.")
+        await message.answer("Level and days must be numbers.")
         return
 
     try:
@@ -53,24 +53,25 @@ async def add_premium_handler(message: Message, config: Config = None, redis=Non
         async with AsyncORM.users._get_session() as session:
             user = await grant_premium(session, identifier, level, days)
             granted_id = user.id if user else None
+            granted_lang = (getattr(user, "language", None) or "ru") if user else "ru"
     except AmbiguousUsername as e:
         # Usernames are not unique any more (Telegram reassigns them), so say
         # which rows collided and let the admin pick one by id.
         await message.answer(
-            f"@{e.username} принадлежит нескольким записям: {e.user_ids}\n"
-            f"Повторите с id: /addpremium {level} <id> {days}"
+            f"@{e.username} belongs to several users: {e.user_ids}\n"
+            f"Repeat with an id: /addpremium {level} <id> {days}"
         )
         return
     except Exception as e:  # noqa: BLE001
-        logger.exception("Ошибка в addpremium: %s", e)
-        await message.answer("Ошибка при обработке команды.")
+        logger.exception("addpremium failed: %s", e)
+        await message.answer("Could not process the command.")
         return
 
     if granted_id is None:
-        await message.answer(f"Пользователь {identifier} не найден.")
+        await message.answer(f"User {identifier} not found.")
         return
 
-    await message.answer(f"Премиум {level} выдан {identifier} на {days} дней ✅")
+    await message.answer(f"Premium {level} granted to {identifier} for {days} days ✅")
 
     # The cached user row carries premium_level, and the chat quota check reads
     # it. Without this the grant would not take effect for up to one cache TTL —
@@ -79,7 +80,9 @@ async def add_premium_handler(message: Message, config: Config = None, redis=Non
     try:
         await message.bot.send_message(
             granted_id,
-            f"Вам выдан премиум {level} на {days} дней! Поздравляем! 🎉",
+            f"Вам выдан премиум {level} на {days} дней! Поздравляем! 🎉"
+            if granted_lang == "ru" else
+            f"You have been granted premium {level} for {days} days! 🎉",
         )
     except Exception as e:  # noqa: BLE001 — a blocked user must not fail the grant
-        logger.warning("Не удалось отправить сообщение пользователю %s: %s", identifier, e)
+        logger.warning("could not notify user %s: %s", identifier, e)

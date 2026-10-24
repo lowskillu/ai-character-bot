@@ -56,7 +56,7 @@ from tgbot.misc.localization import (
 customization_router = Router()
 logger = logging.getLogger(__name__)
 
-# Клавиатура для подписки
+# Channel subscription keyboard
 
 def get_subscription_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
@@ -89,11 +89,11 @@ async def is_user_subscribed(bot: Bot, user_id: int) -> bool:
         return False
 
 def get_name_choice_keyboard(lang: str = "ru", selected_name: Optional[str] = None) -> InlineKeyboardMarkup:
-    """Создает клавиатуру для выбора имени"""
+    """Keyboard for picking a name."""
     names = CHARACTER_NAMES_RU if lang == "ru" else CHARACTER_NAMES_EN
     name_buttons = []
     
-    # Показываем первые 16 имен (8 рядов по 2 кнопки)
+    # First 16 names: 8 rows of 2 buttons
     for name in names[:16]:
         display = name
         if selected_name and selected_name == name:
@@ -124,7 +124,7 @@ def _default_profile_data(lang: str) -> dict:
 
 @customization_router.callback_query(F.data == "profile_create")
 async def start_profile_customization(call: CallbackQuery, state: FSMContext, user: dict = None, bot = None):
-    """Начало кастомизации профиля"""
+    """Start the character wizard."""
     lang = user.get("language", "ru") if user else "ru"
     if bot is None:
         bot = call.bot  # fallback
@@ -181,7 +181,7 @@ async def _set_name(state: FSMContext, name: str) -> None:
 
 @customization_router.callback_query(F.data == "customize_name")
 async def handle_customize_name(call: CallbackQuery, state: FSMContext):
-    """Обработка кастомизации имени"""
+    """Open the name screen."""
     data = await state.get_data()
     await state.update_data(current_field="name")
     await _show_name_screen(call, state, data.get("profile_data", {}).get("name", "—"))
@@ -189,7 +189,7 @@ async def handle_customize_name(call: CallbackQuery, state: FSMContext):
 
 @customization_router.callback_query(F.data.startswith("choose_name_"))
 async def handle_choose_name(call: CallbackQuery, state: FSMContext):
-    """Обработка выбора имени"""
+    """Pick a name from the list."""
     name = call.data[len("choose_name_"):]
     await _set_name(state, name)
     await _show_name_screen(call, state, name)
@@ -197,7 +197,7 @@ async def handle_choose_name(call: CallbackQuery, state: FSMContext):
 
 @customization_router.callback_query(F.data == "random_name")
 async def handle_random_name(call: CallbackQuery, state: FSMContext):
-    """Обработка случайного выбора имени"""
+    """Pick a random name."""
     lang = (await state.get_data()).get("language", "ru")
     name = random.choice(CHARACTER_NAMES_RU if lang == "ru" else CHARACTER_NAMES_EN)
     await _set_name(state, name)
@@ -206,7 +206,7 @@ async def handle_random_name(call: CallbackQuery, state: FSMContext):
 
 @customization_router.callback_query(F.data == "name_back")
 async def handle_name_back(call: CallbackQuery, state: FSMContext):
-    """Возврат к главному меню кастомизации"""
+    """Back to the wizard's main screen."""
     lang = (await state.get_data()).get("language", "ru")
     profile_data = (await state.get_data()).get("profile_data", {})
     preview_text = format_profile_preview(profile_data, lang)
@@ -218,7 +218,7 @@ async def handle_name_back(call: CallbackQuery, state: FSMContext):
 # registered here too; because customization_router comes first, it won and the
 # StateFilter-guarded version in visual_vnesnost.py was dead code.
 
-# --- Исправленный random профиль ---
+# --- Random character ---
 @customization_router.callback_query(F.data == "customize_random")
 async def handle_customize_random(call: CallbackQuery, state: FSMContext):
     lang = (await state.get_data()).get("language", "ru")
@@ -266,7 +266,7 @@ async def handle_customize_finish(call: CallbackQuery, state: FSMContext, redis=
         logger.error("[customize_finish] Redis was not injected")
         await call.answer("Внутренняя ошибка. Попробуйте позже.", show_alert=True)
         return
-    # Проверка лимита профилей (только если создаём новый)
+    # Profile limit (only when creating a new one)
     async with AsyncORM.users._get_session() as session:
         user_obj = await session.get(AsyncORM.users.model, call.from_user.id)
         # effective_level applies premium_until; the raw column did not, so an
@@ -280,7 +280,7 @@ async def handle_customize_finish(call: CallbackQuery, state: FSMContext, redis=
                 show_alert=True
             )
             return
-    # appearance и body сериализуем в JSON
+    # appearance and body are stored as JSON
     appearance = json.dumps({
         "hair": profile_data.get("appearance_hair"),
         "skin": profile_data.get("appearance_skin"),
@@ -331,9 +331,9 @@ async def handle_customize_finish(call: CallbackQuery, state: FSMContext, redis=
                 profile = await update_profile(
                     session, call.from_user.id, editing_profile_id, style=user_style
                 )
-            # Получаем id профиля, пока сессия открыта
+            # Read the id while the session is still open
             new_profile_id = profile.id if profile else None
-        # Очистить editing_profile_id после завершения
+        # Clear editing_profile_id once done
         await state.update_data(editing_profile_id=None)
         await state.clear()
         if new_profile_id:
@@ -426,7 +426,7 @@ async def char_photo_regen_handler(call: CallbackQuery, user: dict = None, redis
         await call.answer("Invalid profile", show_alert=True)
         return
 
-    # Проверка и списание 1 лимита фото за регенерацию
+    # A regeneration costs one picture from the quota
     consumed = await quotas.try_consume(redis, user_id, premium_level)
     if not consumed:
         limit_text = (
@@ -503,7 +503,7 @@ async def check_subscription_handler(call: CallbackQuery, state: FSMContext, use
     real_bot = bot if isinstance(bot, AiogramBot) else call.bot
     assert isinstance(real_bot, Bot)
     if await is_user_subscribed(real_bot, user_id):
-        # Запускаем кастомизацию профиля
+        # Start the character wizard
         default_profile_data = _default_profile_data(lang)
         await state.set_state(ProfileCustomizationState.customizing)
         await state.update_data(profile_data=default_profile_data, language=lang)
@@ -519,7 +519,7 @@ async def check_subscription_handler(call: CallbackQuery, state: FSMContext, use
 
 @customization_router.message(ProfileCustomizationState.customizing)
 async def handle_customization_input(message: Message, state: FSMContext):
-    """Обработка текстового ввода во время кастомизации"""
+    """Text typed while the wizard is open."""
     data = await state.get_data()
     if data.get("waiting_for_name_input"):
         return

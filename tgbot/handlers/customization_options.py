@@ -123,7 +123,7 @@ async def _show(call: CallbackQuery, state: FSMContext, screen: OptionScreen, se
 
 @customization_options_router.callback_query(F.data.in_(OPEN_CALLBACKS))
 async def handle_open(call: CallbackQuery, state: FSMContext):
-    """Открывает выбор параметра."""
+    """Open an option screen."""
     screen = SCREENS[call.data[len("customize_"):]]
     data = await state.get_data()
     await _show(call, state, screen, data.get("profile_data", {}).get(screen.field))
@@ -133,7 +133,7 @@ async def handle_open(call: CallbackQuery, state: FSMContext):
     F.data.func(lambda d: isinstance(d, str) and d.startswith(CHOOSE_PREFIXES))
 )
 async def handle_choose(call: CallbackQuery, state: FSMContext):
-    """Сохраняет выбор и перерисовывает тот же экран."""
+    """Store the choice and redraw the same screen."""
     name, sep, value = call.data.partition("_choose_")
     screen = SCREENS.get(name) if sep else None
     if screen is None:
@@ -152,5 +152,5 @@ async def handle_choose(call: CallbackQuery, state: FSMContext):
 
 @customization_options_router.callback_query(F.data.in_(BACK_CALLBACKS))
 async def handle_back(call: CallbackQuery, state: FSMContext):
-    """Возврат к главному меню кастомизации"""
+    """Back to the wizard's main screen."""
     await show_customization_menu(call, state)

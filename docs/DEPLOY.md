@@ -1,9 +1,9 @@
-# Деплой
+# Deployment
 
-Чеклист перед первым выкатом на публичный сервер и то, что нужно знать про
-эксплуатацию.
+A checklist for the first rollout to a public server, and what to know about
+running it.
 
-## 1. Секреты
+## 1. Secrets
 
 ```bash
 cp .env.example .env
@@ -11,150 +11,149 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"   # WEBHOOK_SECRET
 python -c "import secrets; print(secrets.token_urlsafe(32))"   # REDIS_PASSWORD
 ```
 
-| Переменная | Без неё |
+| Variable | Without it |
 |---|---|
-| `BOT_TOKEN` | нечем работать |
-| `WEBHOOK_SECRET` | **бот не стартует.** Любой, кто узнал URL вебхука, шлёт апдейты от имени любого user_id — включая админский, а это `/admin` → рассылка всей базе и `/addpremium` |
-| `REDIS_PASSWORD` | `--requirepass ""` → Redis без пароля. Порт на loopback, но FSM-состояния и счётчики квот открыты всему, что есть на хосте |
+| `BOT_TOKEN` | nothing works |
+| `WEBHOOK_SECRET` | **the bot refuses to start.** Anyone who learns the webhook URL could post updates as any user_id — including an admin, which means `/admin` → broadcast to everyone and `/addpremium` |
+| `REDIS_PASSWORD` | `--requirepass ""` → Redis without a password. The port is loopback-only, but FSM state and quota counters are open to anything on the host |
 | `POSTGRES_PASSWORD` | — |
-| `OPENROUTER_API_KEY`, `RUNWARE_API_KEY` | чат и фото не работают |
+| `OPENROUTER_API_KEY`, `RUNWARE_API_KEY` | chat and pictures do not work |
 
-`ALLOW_INSECURE_WEBHOOK=true` снимает проверку секрета. Это только для локальной
-разработки; в проде — никогда.
+`ALLOW_INSECURE_WEBHOOK=true` disables the secret check. Local development
+only; never in production.
 
-`.env` в `.gitignore` и в `.dockerignore`, в образ не попадает. Проверить, что
-он действительно не отслеживается:
+`.env` is in `.gitignore` and `.dockerignore`, so it never reaches the image.
+To make sure it is really not tracked:
 
 ```bash
 git ls-files | grep -c '^\.env$'
 ```
 
-Должно быть `0`.
+It must print `0`.
 
-## 2. Домен вебхука
+## 2. Webhook domain
 
-`WEBHOOK_HOST` сейчас указывает на quick-туннель `trycloudflare.com`. Такой
-туннель эфемерный: имя хоста меняется при каждом перезапуске, и после этого
-Telegram шлёт апдейты в никуда. Перед боевым запуском нужен постоянный домен
-(именованный Cloudflare-туннель или A-запись + TLS).
+`WEBHOOK_HOST` needs a permanent domain (a named Cloudflare tunnel, or an A
+record + TLS). A `trycloudflare.com` quick tunnel is ephemeral: its hostname
+changes on every restart, and after that Telegram delivers updates nowhere.
 
-## 3. Что закрыто и почему
+## 3. What is closed and why
 
-Публично доступен **только** `POST /webhook`.
+**Only** `POST /webhook` is public.
 
-`nginx/default.conf` ограничивает приватными подсетями:
+`nginx/default.conf` restricts to private networks:
 
-* проксирование на локальный Bot API сервер (`location /`) — он запущен с
+* the proxy to the local Bot API server (`location /`) — it runs with
   `--allow-unauthorized-updates`;
-* раздачу скачанных файлов (`location /file/bot<token>/…`).
+* serving downloaded files (`location /file/bot<token>/…`).
 
-Боту это через nginx не нужно: он ходит в `telegram-api-server:8081` напрямую по
-compose-сети (`TELEGRAM_API_BASE`).
+The bot does not need either through nginx: it talks to
+`telegram-api-server:8081` directly over the compose network
+(`TELEGRAM_API_BASE`).
 
-Аутентификация `/webhook` — это secret token, а не список IP: запросы приходят
-от Cloudflare, а не из диапазонов Telegram, так что allowlist здесь либо сломал
-бы доставку, либо был бы настолько широким, что ничего не доказывает.
+`/webhook` is authenticated by the secret token, not an IP allowlist: requests
+come from Cloudflare, not from Telegram's ranges, so an allowlist would either
+break delivery or be so wide it proves nothing.
 
-Порты Postgres и Redis замаплены на `127.0.0.1`.
+The Postgres and Redis ports are mapped to `127.0.0.1`.
 
-После запуска проверить конфиг nginx (в этой сессии контейнером не
-валидировался — Docker daemon был выключен):
+After the first start, validate the nginx config (it has not been checked in a
+container yet):
 
 ```bash
 docker compose exec nginx nginx -t
 ```
 
-## 4. Запуск
+## 4. Starting
 
 ```bash
 docker compose up -d --build
 ```
 
-Порядок гарантирован через `depends_on`: Postgres и Redis по healthcheck →
-одноразовый job `migrations` (`alembic upgrade head`) должен выйти с 0 → бот →
-nginx ждёт `/healthz` бота.
+The order is enforced by `depends_on`: Postgres and Redis pass their
+healthchecks → the one-shot `migrations` job (`alembic upgrade head`) must exit
+with 0 → the bot → nginx waits for the bot's `/healthz`.
 
-Проверка:
+Check:
 
 ```bash
 docker compose ps
 docker compose exec tg_bot python -c "import urllib.request;print(urllib.request.urlopen('http://127.0.0.1:80/healthz').read())"
 ```
 
-## 5. Ёмкость
+## 5. Capacity
 
-Замеры — в [LOAD_TEST.md](LOAD_TEST.md).
+Measurements are in [LOAD_TEST.md](LOAD_TEST.md).
 
-| Переменная | По умолчанию | Когда трогать |
+| Variable | Default | When to change it |
 |---|---|---|
-| `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` | 30 / 20 | `db_pool_checked_out` в `/metrics` подходит к `db_pool_size`. Это первое, что упирается при волне регистраций |
-| `LLM_CONCURRENCY` | 256 | растёт `requests_shed_total`, а OpenRouter держит |
-| `IMAGE_CONCURRENCY` | 8 | только если поднят лимит на стороне Runware |
-| `FREE_MESSAGE_LIMIT` / `PREMIUM_MESSAGE_LIMIT` | 25 / 200 | продуктовое решение |
+| `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` | 30 / 20 | `db_pool_checked_out` in `/metrics` approaches `db_pool_size`. This is the first thing to run out during a registration wave |
+| `LLM_CONCURRENCY` | 256 | `requests_shed_total` grows while OpenRouter keeps up |
+| `IMAGE_CONCURRENCY` | 8 | only if Runware raises your limit |
+| `FREE_MESSAGE_LIMIT` / `PREMIUM_MESSAGE_LIMIT` | 25 / 200 | a product decision |
 
-## 5.1 Модели
+## 5.1 Models
 
-Все id и параметры сэмплинга — в env, значения по умолчанию совпадают с тем,
-что было зашито в коде. Полный список в `.env.example`.
+All model ids and sampling parameters are env variables. The full list is in
+`.env.example`.
 
-| Переменная | По умолчанию | Что это |
+| Variable | Default | What it is |
 |---|---|---|
-| `CHAT_MODEL` | `meta-llama/llama-3.3-70b-instruct` | чат с персонажем, OpenRouter |
-| `PROMPT_MODEL` | `meta-llama/llama-3.3-70b-instruct` | сборка описания картинки, OpenRouter |
-| `IMAGE_MODEL_ANIME` | `runware:101@1` | модель Runware, она же фолбэк |
-| `IMAGE_MODEL_REALISTIC` | `runware:101@1` | модель Runware |
-| `MAX_HISTORY_LENGTH` | 5 | сколько прошлых реплик уходит в модель. В БД хранится 10 — это отдельная ручка: поднять улучшает связность и стоит токенов |
+| `CHAT_MODEL` | `meta-llama/llama-3.3-70b-instruct` | character chat, OpenRouter |
+| `PROMPT_MODEL` | `meta-llama/llama-3.3-70b-instruct` | builds the picture description, OpenRouter |
+| `IMAGE_MODEL_ANIME` | `runware:101@1` | Runware model, also the fallback |
+| `IMAGE_MODEL_REALISTIC` | `runware:101@1` | Runware model |
+| `MAX_HISTORY_LENGTH` | 5 | how many past turns are sent to the model. The database keeps 10 — a separate knob: raising it improves continuity and costs tokens |
 
-Смена модели теперь не требует пересборки образа: правите `.env` и
-`docker compose up -d`. Откатить неудачную модель — так же.
+Changing a model does not need an image rebuild: edit `.env` and run
+`docker compose up -d`. Rolling back a bad model works the same way.
 
-**На одно фото уходит два платных вызова** (OpenRouter на промпт + Runware на
-картинку), на одно сообщение в чате — один.
+**One picture costs two paid calls** (OpenRouter for the prompt + Runware for
+the image); one chat message costs one.
 
-`max_connections` у Postgres поднят до 200, чтобы пул можно было увеличивать.
+Postgres `max_connections` is raised to 200 so the pool can grow.
 
-## 6. Что НЕ проверено — проверить на первом выкате
+## 6. Not verified yet — check on the first rollout
 
-Тесты (237) не поднимают ни Postgres, ни Redis, ни Telegram: всё внешнее
-заменено фейками. Поэтому следующее проверено только чтением и компиляцией
-запроса, но ни разу не выполнялось против настоящей базы:
+The unit tests start neither Postgres, Redis nor Telegram: everything external
+is faked. So the following has only been checked by reading and compiling the
+query, never against a real database under load:
 
-| Что | Где | Как проверить |
+| What | Where | How to check |
 |---|---|---|
-| Обрезка истории одним `DELETE … NOT IN (SELECT … LIMIT)` | `services/dialog_history.py:trim_profile_history` | Написать 15 сообщений в один профиль, убедиться, что осталось 10 и это самые новые |
-| Keyset-пагинация рассылки | `database/orm.py:iter_all` | `/admin` → рассылка на базе из >500 юзеров; убедиться, что дошло до всех, а не до первых 500 |
-| Конфиг nginx | `nginx/default.conf` | `docker compose exec nginx nginx -t` |
-| Сборка образа | `Dockerfile` | `docker compose build` |
+| History trimming with a single `DELETE … NOT IN (SELECT … LIMIT)` | `services/dialog_history.py:trim_profile_history` | Send 15 messages to one profile and make sure 10 are left and they are the newest |
+| Keyset pagination of the broadcast | `database/orm.py:iter_all` | `/admin` → broadcast to a database of >500 users; make sure everyone got it, not only the first 500 |
+| nginx config | `nginx/default.conf` | `docker compose exec nginx nginx -t` |
+| Image build | `Dockerfile` | `docker compose build` |
 
-Стенд для первых двух уже описан в [LOAD_TEST.md](LOAD_TEST.md) — там поднимается
-настоящий Postgres в докере.
+The bench for the first two is described in [LOAD_TEST.md](LOAD_TEST.md) — it
+runs a real Postgres in Docker.
 
-## 7. Что осталось нерешённым
+## 7. Still open
 
-Это не сделано намеренно — нужны ваши решения, а не мои догадки.
+These were left on purpose — they need the owner's decision, not a guess.
 
-**Бэкапы Postgres.** Их нет. Нужно выбрать место хранения, расписание и срок
-хранения. Минимум:
+**Postgres backups.** There are none. Choose a location, a schedule and a
+retention period. At minimum:
 
 ```bash
 docker compose exec -T postgres_db pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB" | gzip > backup-$(date +%F).sql.gz
 ```
 
-**Лимиты ресурсов в compose.** Не выставлены: не зная размера сервера, любое
-значение — это риск словить OOM-kill вместо защиты.
+**Resource limits in compose.** Not set: without knowing the server size, any
+value risks an OOM kill instead of protection.
 
-**Ретеншен истории.** `delete_old_profile_messages()` (45 дней) написана, но
-нигде не вызывается. Таблица и так ограничена 10 строками на профиль
-(`trim_profile_history`), так что она нужна не для размера, а как политика
-хранения: сейчас переписка неактивного пользователя лежит вечно. Это стоит
-решить осознанно.
+**History retention.** `delete_old_profile_messages()` (45 days) exists but is
+never called. The table is already capped at 10 rows per profile
+(`trim_profile_history`), so this is about a retention policy, not size: right
+now an inactive user's chat is kept forever. Worth deciding deliberately.
 
-**Мёртвые объекты схемы.** Колонка `users.welcome_sent` (нигде не читается).
-Удаление — необратимая миграция, поэтому оставлена на ваше решение.
+**Dead schema objects.** The `users.welcome_sent` column (never read).
+Dropping it is an irreversible migration, so it is left for the owner to decide.
 
-**Ротация ключей.** `.env` в git не попадал, но если сервер или файл когда-либо
-были доступны кому-то ещё — `BOT_TOKEN`, `OPENROUTER_API_KEY` и
-`RUNWARE_API_KEY` стоит перевыпустить.
+**Key rotation.** `.env` has never been committed, but if the server or the
+file was ever accessible to someone else, rotate `BOT_TOKEN`,
+`OPENROUTER_API_KEY` and `RUNWARE_API_KEY`.
 
-**Путь генерации фото под нагрузкой не тестировался.** Нужен стаб Runware.
-`IMAGE_CONCURRENCY=8` взят из головы, под реальные лимиты Runware не подбирался.
+**The picture path has not been load-tested.** It needs a Runware stub.
+`IMAGE_CONCURRENCY=8` is a guess, not tuned to Runware's real limits.

@@ -14,7 +14,7 @@ async def get_user_profiles(session: AsyncSession, user_id: int) -> List[Profile
         )
         return list(result.scalars().all())
     except Exception as e:
-        logger.error(f"Ошибка при получении профилей пользователя {user_id}: {e}")
+        logger.error(f"could not load profiles of user {user_id}: {e}")
         return []
 
 async def is_premium(session: AsyncSession, user_id: int) -> bool:
@@ -33,7 +33,7 @@ async def is_premium(session: AsyncSession, user_id: int) -> bool:
         )
         return premium.is_active(result.scalar_one_or_none())
     except Exception as e:
-        logger.error(f"Ошибка при проверке премиума пользователя {user_id}: {e}")
+        logger.error(f"could not check premium of user {user_id}: {e}")
         return False
 
 async def create_profile(
@@ -65,10 +65,10 @@ async def create_profile(
             reference_photo_url=reference_photo_url,
         )
         session.add(profile)
-        await session.flush()  # Гарантирует, что profile.id будет присвоен
+        await session.flush()  # Assigns profile.id
         return profile
     except Exception as e:
-        logger.error(f"Ошибка при создании профиля для пользователя {user_id}: {e}")
+        logger.error(f"could not create a profile for user {user_id}: {e}")
         return None
 
 async def update_profile(
@@ -99,7 +99,7 @@ async def update_profile(
         await session.flush()
         return profile
     except Exception as e:
-        logger.error(f"Ошибка при обновлении профиля {profile_id} пользователя {user_id}: {e}")
+        logger.error(f"could not update profile {profile_id} of user {user_id}: {e}")
         return None
 
 
@@ -114,16 +114,16 @@ async def delete_profile(session: AsyncSession, user_id: int, profile_id: int) -
         await session.delete(profile)
         return True
     except Exception as e:
-        logger.error(f"Ошибка при удалении профиля {profile_id} пользователя {user_id}: {e}")
+        logger.error(f"could not delete profile {profile_id} of user {user_id}: {e}")
         return False
 
 async def delete_all_profiles_for_user(session: AsyncSession, user_id: int) -> None:
-    """Удаляет все профили пользователя по user_id."""
+    """Delete every profile of a user."""
     from tgbot.database.models import Profile
     await session.execute(
         delete(Profile).where(Profile.user_id == user_id)
     )
-    # Не делаем await session.commit() здесь, чтобы не закрывать внешнюю транзакцию 
+    # No commit here: the caller owns the transaction
 
 # get_profile_by_id() stood here unused, and it looked up a profile by id alone
 # with no user_id predicate — the exact shape that would let one user read
@@ -131,7 +131,7 @@ async def delete_all_profiles_for_user(session: AsyncSession, user_id: int) -> N
 # load_chat_context or update_profile, both of which scope by user.
 
 async def set_active_profile(redis, user_id: int, profile_id: int):
-    """Сохраняет активный профиль пользователя в Redis."""
+    """Store the active profile pointer in Redis."""
     try:
         await redis.set(f"active_profile:{user_id}", profile_id)
         logger.info(f"Set active profile for user {user_id}: {profile_id}")
@@ -139,7 +139,7 @@ async def set_active_profile(redis, user_id: int, profile_id: int):
         logger.error(f"Failed to set active profile for user {user_id}: {e}")
 
 async def get_active_profile(redis, user_id: int) -> Optional[int]:
-    """Получает активный профиль пользователя из Redis."""
+    """Read the active profile pointer from Redis."""
     try:
         profile_id = await redis.get(f"active_profile:{user_id}")
         return int(profile_id) if profile_id else None

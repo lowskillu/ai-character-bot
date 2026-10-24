@@ -1,5 +1,5 @@
 def get_welcome_message(lang: str = "ru") -> str:
-    """Возвращает приветственное сообщение после создания профиля"""
+    """Welcome message shown after a character is created."""
     if lang == "ru":
         return (
             "👋 Добро пожаловать в чат с твоим персонажем!\n\n"

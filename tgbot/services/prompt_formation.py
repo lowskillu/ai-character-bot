@@ -65,7 +65,7 @@ async def generate_photo_prompt(
             if dialogue_lines:
                 recent_dialogue_str = "<recent_dialogue>\n" + "\n".join(dialogue_lines) + "\n</recent_dialogue>\n\n"
 
-        # Сначала берём стиль из user_states, если есть, иначе из профиля
+        # Style from user_states if given, otherwise from the profile
         if user_states and user_id in user_states and user_states[user_id].get('style'):
             style = user_states[user_id]['style'].lower()
         else:

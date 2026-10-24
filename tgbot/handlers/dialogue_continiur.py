@@ -1,7 +1,7 @@
 """Switching between profiles: preview the last exchange, continue or restart.
 
 Language used to come from the FSM (``state.get_data()["language"]``), which is
-only populated by the customization wizard. Reached from /menu → Профили the
+only populated by the customization wizard. Reached from /menu → Profiles the
 state is empty, so every English user saw this screen in Russian. It now comes
 from the ``user`` dict the DatabaseMiddleware injects, exactly like every other
 handler, and falls back to the FSM only when that is missing.
@@ -54,8 +54,8 @@ async def _activate(call: CallbackQuery, redis, user_id: int, profile_id: int, l
     """Point the user's active-profile pointer at this profile.
 
     Returns False when it could not be done. The active profile lives only in
-    Redis, so without it the next message answers "Сначала выбери профиль" —
-    telling the user "Профиль выбран!" anyway, which both call sites used to do,
+    Redis, so without it the next message answers "Please select a profile first" —
+    telling the user "Profile selected!" anyway, which both call sites used to do,
     is a straight lie about the state they are in.
     """
     if redis is None:
@@ -108,7 +108,7 @@ async def select_profile(
     # from callback data, which the user controls: activating before checking
     # let anyone point their own active-profile pointer at a stranger's id.
     # Nothing leaked — load_chat_context scopes by user_id too — but it left
-    # them with a pointer that answers "Профиль не найден" to every message.
+    # them with a pointer that answers "Profile not found" to every message.
     #
     # One transaction for the ownership check, the preview and the timestamp;
     # the last of those used to open a second session inside the first.
@@ -140,7 +140,7 @@ async def select_profile(
             "[dialogue] user %s selected profile %s that is not theirs", user_id, profile_id
         )
         await call.answer(
-            "Профиль не найден" if lang != "en" else "Profile not found", show_alert=True
+            "Profile not found" if lang != "en" else "Profile not found", show_alert=True
         )
         return
 
@@ -152,7 +152,7 @@ async def select_profile(
         await call.message.edit_text(
             _reunion_text(lang, name), reply_markup=None, parse_mode="Markdown"
         )
-        await call.answer("Профиль выбран!" if lang != "en" else "Profile selected!")
+        await call.answer("Profile selected!" if lang != "en" else "Profile selected!")
         return
 
     preview_text = "\n".join(
@@ -187,7 +187,7 @@ async def select_profile(
         )
     )
     await call.message.edit_text(msg_text, reply_markup=get_history_action_keyboard(lang))
-    # Сохраняем выбранный profile_id для дальнейшей обработки
+    # Remember the chosen profile for the continue/restart buttons
     await state.update_data(_pending_profile_id=profile_id, _pending_profile_name=name)
     await call.answer()
 
@@ -210,7 +210,7 @@ async def profile_history_action_handler(
         return
 
     if call.data == "profile_history_new":
-        # Сбросить историю в БД
+        # Clear the stored history
         async with AsyncORM.users._get_session() as session:
             await session.execute(
                 delete(ProfileMessageHistory).where(
@@ -232,17 +232,17 @@ async def profile_history_action_handler(
     await call.message.edit_text(
         _reunion_text(lang, profile_name), reply_markup=None, parse_mode="Markdown"
     )
-    await call.answer("Профиль выбран!" if lang != "en" else "Profile selected!")
-    # Удаляем временный ключ
+    await call.answer("Profile selected!" if lang != "en" else "Profile selected!")
+    # Drop the temporary keys
     await state.update_data(_pending_profile_id=None, _pending_profile_name=None)
 
 
-# Новый обработчик для кнопки 'Назад' в истории профиля
+# Back button on the history screen
 @dialogue_router.callback_query(F.data == "profile_history_back")
 async def profile_history_back_handler(
     call: CallbackQuery, state: FSMContext, user: dict = None, redis=None
 ):
-    # Не меняем активный профиль, просто возвращаем к меню профилей
+    # Leave the active profile alone; just go back to the profile list
     from tgbot.handlers.menu import show_profiles_menu
 
     await show_profiles_menu(call, state, user=user, redis=redis)

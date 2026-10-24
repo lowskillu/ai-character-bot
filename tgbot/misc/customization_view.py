@@ -44,7 +44,7 @@ def get_customization_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-# --- Исправленный format_profile_preview ---
+# --- Profile preview ---
 def format_profile_preview(profile_data: dict, lang: str = "ru") -> str:
     hair = APPEARANCE_HAIR_VALUE_TO_TEXT[lang].get(profile_data.get('appearance_hair') or '', '-')
     skin = APPEARANCE_SKIN_VALUE_TO_TEXT[lang].get(profile_data.get('appearance_skin') or '', '-')

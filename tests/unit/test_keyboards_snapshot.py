@@ -40,7 +40,7 @@ def collect():
             visual_vnesnost.get_appearance_main_keyboard(lang)
         )
         # The option grid itself was never covered, which is how a dead
-        # "💾 Сохранить" button survived in the builder: every call site passed
+        # "💾 Save" button survived in the builder: every call site passed
         # saved=True, so it was never rendered and its handler was unreachable.
         out[f"appearance_opts_{lang}"] = render(
             visual_vnesnost.get_appearance_option_keyboard(

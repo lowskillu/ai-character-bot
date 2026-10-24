@@ -1,7 +1,7 @@
 """MarkdownV2 escaping.
 
 A backslash in the model's output left a dangling escape, Telegram rejected the
-message with a 400, and the user got "Ошибка генерации ответа" instead of a reply.
+message with a 400, and the user got "Failed to generate response" instead of a reply.
 """
 
 import pytest

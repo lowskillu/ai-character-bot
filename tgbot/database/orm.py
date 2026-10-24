@@ -310,7 +310,7 @@ class AsyncORM:
 
     # Repository instances
     users = None
-    profile_message_history = None  # Добавлено для истории сообщений
+    profile_message_history = None
 
     @classmethod
     def set_session_factory(cls, session_factory: sessionmaker) -> None:
@@ -332,7 +332,7 @@ class AsyncORM:
             raise ValueError("Session factory not set. Call set_session_factory first.")
 
         cls.users = UsersRepo(cls._session_factory)
-        cls.profile_message_history = ProfileMessageHistoryRepo(cls._session_factory)  # Добавлено
+        cls.profile_message_history = ProfileMessageHistoryRepo(cls._session_factory)
         cls._initialized = True
 
     @classmethod

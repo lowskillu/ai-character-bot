@@ -9,7 +9,7 @@ There were three different answers to "is this user premium" in the tree:
 
 The third group is the one that mattered: an expired subscriber kept the 50
 photos/day quota instead of dropping to the free tier, kept four profile slots,
-and was shown "✅ Активен до <дата в прошлом>" on the stats screen.
+and was shown "✅ Active until <a date in the past>" on the stats screen.
 """
 
 import logging
@@ -86,17 +86,17 @@ async def grant_premium(
 
     Was ``scalar_one_or_none()``, which raises MultipleResultsFound on a shared
     username — swallowed by a blanket except and reported to the admin as a
-    generic "не удалось", with no hint that the name was the problem.
+    generic "failed", with no hint that the name was the problem.
 
     Raises :class:`AmbiguousUsername` so the caller can say which ids collided.
     """
     user = await resolve_user(session, identifier)
     if user is None:
-        logger.error("Пользователь %s не найден", identifier)
+        logger.error("user %s not found", identifier)
         return None
 
     user.premium_level = level
     user.premium_until = datetime.utcnow() + timedelta(days=days)
     await session.flush()
-    logger.info("Премиум %s выдан %s (id=%s) до %s", level, identifier, user.id, user.premium_until)
+    logger.info("premium %s granted to %s (id=%s) until %s", level, identifier, user.id, user.premium_until)
     return user

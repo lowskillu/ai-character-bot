@@ -54,13 +54,13 @@ REDIS_POOL_KWARGS = {
 
 @dataclass
 class WebhookConfig:
-    """Конфигурация для webhook"""
+    """Webhook settings."""
 
     host: str = "0.0.0.0"
     # 80 inside the container; overridable so it can run unprivileged locally.
     port: int = int(os.getenv("WEBHOOK_PORT", "80"))
     path: str = "/webhook"
-    # Cloudflare адрес берётся из ENV: WEBHOOK_HOST
+    # Public webhook URL, from the WEBHOOK_HOST env var
     webhook_url: str = os.getenv("WEBHOOK_HOST", "")
     # Shared secret Telegram echoes back in X-Telegram-Bot-Api-Secret-Token.
     # Without it, anyone who learns the webhook URL can post forged updates
@@ -121,7 +121,7 @@ class TgBot:
                 level=logging.INFO,
                 format="%(asctime)s - %(name)s - %(levelname)s - %(message)s [%(filename)s:%(lineno)d]",
             )
-        # Для высокой нагрузки используем INFO вместо DEBUG
+        # INFO rather than DEBUG: debug logging is too heavy under load
         logging.getLogger("aiogram").setLevel(logging.WARNING)
         logging.getLogger("aiohttp").setLevel(logging.WARNING)
         self.logger.info("Initializing bot")
@@ -171,7 +171,7 @@ class TgBot:
             )
             self.dp = Dispatcher(storage=storage)
 
-            # Инициализация Redis-клиента для антидублирующего middleware
+            # Shared Redis client (anti-duplicate middleware, locks, quotas)
             self.redis = aioredis.from_url(self.config.redis.dsn(), **REDIS_POOL_KWARGS)
 
             # Register handlers and middlewares
@@ -203,7 +203,7 @@ class TgBot:
         if not self.dp:
             raise RuntimeError("Dispatcher not initialized")
             
-        # AntiDuplicateMiddleware только на уровне update
+        # AntiDuplicateMiddleware runs on raw updates only
         if self.redis:
             self.dp.update.outer_middleware(AntiDuplicateMiddleware(self.redis))
         

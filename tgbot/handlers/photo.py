@@ -37,7 +37,7 @@ import random
 photo_router = Router()
 logger = logging.getLogger(__name__)
 
-# Триггерные фразы для генерации фото
+# Phrases that trigger picture generation
 PHOTO_TRIGGERS = [
     "show", "send photo", "photo", "give photo", "give me photo",
     "покажи", "скинь фото", "отправь фото", "фото", "покажи мне",
@@ -58,7 +58,7 @@ _TRIGGER_RE = re.compile(
 
 
 def is_photo_trigger(text: str) -> bool:
-    """Проверяет, является ли текст триггером для генерации фото"""
+    """True when the text asks for a picture."""
     if not text:
         return False
     return _TRIGGER_RE.search(text) is not None
@@ -114,7 +114,7 @@ async def _run_photo_turn(message: Message, lang: str, user_id: int, redis) -> N
         # allowance instead of falling back to the free lifetime quota.
         premium_level = premium.effective_level(user_obj)
         style = getattr(user_obj, "style", "anime") if user_obj else "anime"
-        # Сохраняем параметры фото сразу, чтобы не обращаться к user_obj вне сессии
+        # Read the picture settings now; user_obj is detached after the session
         photo_skin = getattr(user_obj, 'photo_skin', None)
 
     # Reserves the slot atomically; released again on every failure path below.
@@ -160,7 +160,7 @@ async def _generate_and_send(
     photo_skin: Optional[str],
 ) -> bool:
     """Build the prompt, generate the image, deliver it. True if the user got a photo."""
-    # Локализация сообщений ожидания
+    # Waiting messages
     if lang == 'ru':
         status_texts = [
             "📷 Секунду, готовлю фото…",
@@ -176,7 +176,7 @@ async def _generate_and_send(
 
     status_msg = await message.answer(status_texts[0])
 
-    # Формируем промпт через сервис
+    # Build the image prompt
     async def get_profile(uid: int) -> Optional[dict]:
         # Uses the shared client injected by ConfigMiddleware. This used to
         # build a brand-new Redis client (and pool) on every call and never
@@ -186,7 +186,7 @@ async def _generate_and_send(
             orm = cast(AsyncORM, AsyncORM.users)
             async with orm._get_session() as session:
                 profile = await session.get(Profile, active_profile_id)
-                user = await session.get(User, uid)  # Получаем пользователя для языка
+                user = await session.get(User, uid)  # For the language
                 if profile:
                     import json
                     appearance = json.loads(profile.appearance) if profile.appearance else {}
@@ -203,7 +203,7 @@ async def _generate_and_send(
                         "location": profile.location,
                         "role": profile.role,
                         "reference_photo_url": getattr(profile, "reference_photo_url", None),
-                        "language": getattr(user, "language", "ru") if user else "ru",  # Добавляем язык пользователя
+                        "language": getattr(user, "language", "ru") if user else "ru",
                     }
         return None
 
@@ -238,7 +238,7 @@ async def _generate_and_send(
         )
         return False
 
-    # После генерации prompt добавить параметры фото
+    # Append the picture finish to the prompt
     photo_params = []
     skin_map = {'natural': 'natural texture, sharp detail', 'soft': 'soft focus, smooth tones'}
     if photo_skin in skin_map:
@@ -316,7 +316,7 @@ async def _generate_and_send(
         await message.answer(generation_failed)
         return False
 
-    # Динамическая генерация подписи от лица персонажа
+    # Caption written by the character
     ai_caption = None
     if prof_data and prof_data.get("profile_id"):
         profile_id = prof_data["profile_id"]
@@ -346,7 +346,7 @@ async def _generate_and_send(
 
     if ai_caption and ai_caption.strip():
         caption = ai_caption.strip()
-        # Ограничиваем подпись не более чем 3 абзацами
+        # At most 3 paragraphs
         paragraphs = [p for p in caption.split("\n") if p.strip()]
         if len(paragraphs) > 3:
             caption = "\n\n".join(paragraphs[:3])
@@ -411,7 +411,7 @@ async def handle_photo_style_choose(call: CallbackQuery, state: FSMContext, user
         user_obj = await session.get(User, user_id)
         if user_obj:
             user_obj.style = new_style
-            await session.flush() # Сохраняем изменение
+            await session.flush() # Persist the change
 
     text = get_photo_style_message(lang, new_style)
     keyboard = get_photo_style_keyboard(lang, new_style)
@@ -453,7 +453,7 @@ async def handle_photo_skin_choose(call: CallbackQuery, state: FSMContext, user:
 
 @photo_router.callback_query(F.data == "photo_settings_back_to_menu")
 async def handle_photo_settings_back_to_menu(call: CallbackQuery, state: FSMContext, user: dict = None):
-    from tgbot.handlers.menu import get_menu_text_and_keyboard # Импортируем для возврата в главное меню
+    from tgbot.handlers.menu import get_menu_text_and_keyboard # Imported here to avoid a circular import
     lang = user.get("language", "ru") if user else "ru"
     text, keyboard = get_menu_text_and_keyboard(lang)
     await call.message.edit_text(text, reply_markup=keyboard)

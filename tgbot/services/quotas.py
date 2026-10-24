@@ -27,8 +27,8 @@ def _env_int(name: str, default: int) -> int:
 DEFAULT_LIMIT = _env_int("FREE_PHOTO_LIMIT", 2)  # free tier, lifetime
 PREMIUM1_LIMIT = _env_int("PREMIUM_PHOTO_LIMIT", 50)  # premium tier, per day
 
-# Advertised on the premium and stats screens as "25 сообщений/навсегда" and
-# "200 сообщений/день". Until this existed nothing enforced either number: the
+# Advertised on the premium and stats screens as "25 messages, lifetime" and
+# "200 messages per day". Until this existed nothing enforced either number: the
 # free tier was effectively unlimited, and every message was a paid LLM call.
 FREE_MESSAGE_LIMIT = _env_int("FREE_MESSAGE_LIMIT", 25)
 PREMIUM_MESSAGE_LIMIT = _env_int("PREMIUM_MESSAGE_LIMIT", 200)
@@ -91,7 +91,7 @@ async def _usage(redis, key: str, limit: int) -> Tuple[int, int]:
     """``(used, limit)`` for display.
 
     Clamped at zero: a counter can only go negative through a release that was
-    never reserved, and "-1/25 использовано" on the stats screen is a puzzle for
+    never reserved, and "-1/25 used" on the stats screen is a puzzle for
     the user rather than information.
     """
     used = int(await redis.get(key) or 0)

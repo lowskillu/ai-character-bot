@@ -25,7 +25,7 @@ def get_photo_settings_main_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
     ]
     return InlineKeyboardMarkup(inline_keyboard=photo_setting_buttons)
 
-# --- Параметры -> Тип кожи ---
+# --- Parameters -> picture finish ---
 def get_photo_skin_message(lang: str = "ru") -> str:
     if lang == "ru":
         return (
@@ -54,7 +54,7 @@ def get_photo_skin_keyboard(lang: str = "ru", selected_skin: Optional[str] = Non
         columns=1,
     )
 
-# --- Параметры - Основное меню ---
+# --- Parameters: main screen ---
 def get_photo_params_menu_text(lang: str = "ru") -> str:
     if lang == "ru":
         return "🛠 Выберите параметр, который хотите настроить:"
@@ -68,7 +68,7 @@ def get_photo_params_menu_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
     ]
     return InlineKeyboardMarkup(inline_keyboard=photo_params_buttons)
 
-# --- Стиль фото (аниме/реализм) ---
+# --- Image style (anime / realistic) ---
 def get_photo_style_message(lang: str = "ru", selected_style: Optional[str] = None) -> str:
     if lang == "ru":
         return (

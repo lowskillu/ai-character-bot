@@ -61,7 +61,7 @@ def get_language_choice_keyboard():
 
 
 def get_ready_to_start_keyboard(lang: str = "ru"):
-    """Single "Начать" button. Was built inline in three handlers."""
+    """Single "Start" button. Was built inline in three handlers."""
     from tgbot.misc.start_message_text import get_start_button_text
 
     return InlineKeyboardMarkup(

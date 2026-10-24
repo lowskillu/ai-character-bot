@@ -1,212 +1,217 @@
-# Архитектура AI Character Bot
+# AI Character Bot architecture
 
-Документ описывает **текущее** состояние кода и целевую структуру, к которой мы
-идём. Чеклист выката — в [DEPLOY.md](DEPLOY.md), замеры — в
-[LOAD_TEST.md](LOAD_TEST.md).
+This document describes the **current** state of the code and the target
+structure it is moving towards. The rollout checklist is in
+[DEPLOY.md](DEPLOY.md), measurements are in [LOAD_TEST.md](LOAD_TEST.md).
 
-## Что делает бот
+## What the bot does
 
-Telegram-бот с AI-персонажами. Два тяжёлых сценария:
+A Telegram bot with AI characters. Two heavy flows:
 
-| Сценарий | Путь | Стоимость |
+| Flow | Path | Cost |
 |---|---|---|
-| **Чат** | текст → активный профиль + история 10 сообщений из Postgres → OpenRouter (`meta-llama/llama-3.3-70b-instruct`) → ответ → 2 строки в историю | 1 LLM-вызов, медиана ~5 с |
-| **Фото** | триггер-слово → профиль → OpenRouter строит SD-промпт → Runware по websocket → фото | 2 внешних вызова, 10–40 с |
+| **Chat** | text → active profile + last 10 messages from Postgres → OpenRouter (`meta-llama/llama-3.3-70b-instruct`) → reply → 2 history rows | 1 LLM call, median ~5 s |
+| **Picture** | trigger word → profile → OpenRouter builds the image prompt → Runware over websocket → picture | 2 external calls, 10–40 s |
 
-Плюс: визард создания профиля (FSM), инлайн-меню, языки ru/en, премиум-уровни,
-админ-рассылка.
+Plus: a character-creation wizard (FSM), inline menus, ru/en, premium tiers,
+an admin broadcast.
 
-## Поток обработки апдейта
+## How an update flows
 
 ```
-Telegram → nginx:80 → tg_bot:80/webhook   ← единственный публичный путь
+Telegram → nginx:80 → tg_bot:80/webhook   ← the only public path
                           │
-                          ├─ GracefulRequestHandler проверяет secret_token
-                          ├─ отвечает 200 за ~2 мс
-                          └─ asyncio.create_task(обработка)
+                          ├─ GracefulRequestHandler checks secret_token
+                          ├─ answers 200 in ~2 ms
+                          └─ asyncio.create_task(handling)
                                   │
-                                  ├─ IsPrivate (фильтр на Dispatcher) только 1:1 чаты
-                                  ├─ AntiDuplicateMiddleware   SET NX по update_id
-                                  ├─ ConfigMiddleware          инжектит config + redis
-                                  ├─ DatabaseMiddleware        get-or-create юзера (кэш)
-                                  ├─ DeveloperMiddleware       в dev-режиме пускает только админов
-                                  └─ routers_list по порядку
+                                  ├─ IsPrivate (Dispatcher filter)  one-to-one chats only
+                                  ├─ AntiDuplicateMiddleware   SET NX on update_id
+                                  ├─ ConfigMiddleware          injects config + redis
+                                  ├─ DatabaseMiddleware        get-or-create the user (cached)
+                                  ├─ DeveloperMiddleware       admins only in dev mode
+                                  └─ routers_list, in order
 ```
 
-**Ключевой факт:** aiogram уже отвечает Telegram сразу и обрабатывает апдейт в
-фоновой задаче (`handle_in_background=True` по умолчанию). Узкое место — не
-вебхук, а пул коннектов к Postgres.
+**Key fact:** aiogram already answers Telegram immediately and handles the
+update in a background task (`handle_in_background=True` by default). The
+bottleneck is not the webhook but the Postgres connection pool.
 
 ---
 
-## Корень репозитория
+## Repository root
 
-| Файл | Ответственность |
+| File | Responsibility |
 |---|---|
-| `bot.py` | Точка входа и жизненный цикл. Собирает Bot/Dispatcher/Redis/engine, настраивает вебхук и middleware, ждёт сигнал остановки, гасит всё по порядку. `GracefulRequestHandler` дожидается незавершённых апдейтов. |
-| `pyproject.toml` | Зависимости (прямые, без транзитивных) + конфиг ruff/mypy/pytest. Заменил `requirements.txt`. |
-| `Dockerfile` | Multi-stage сборка на `python:3.11-slim`. Билдер ставит зависимости в venv, рантайм получает только venv + код, работает под non-root. |
-| `docker-compose.yml` | Прод-стек: nginx, telegram-api-server, postgres, redis, one-shot миграции, бот. Порты БД/Redis только на loopback, ротация логов, healthcheck'и. |
-| `alembic.ini` | Конфиг Alembic. `sqlalchemy.url` намеренно пустой — URL строится из окружения в `migrations/env.py`. |
-| `.env.example` | Шаблон всех 20+ переменных окружения. |
-| `.dockerignore` | Держит `.env`, `.git`, кэши и тесты вне образа. |
-| `nginx/default.conf` | Публично — только `/webhook` (keep-alive к боту). Проксирование на Bot API и раздача файлов ограничены приватными подсетями: сервер запущен с `--allow-unauthorized-updates`, а боту он доступен напрямую по compose-сети. Маскирует токен в логах. |
-| `migrations/env.py` | Alembic-окружение. Всегда перезаписывает URL из `load_config()`, для онлайн-режима меняет `asyncpg` на `psycopg`. |
-| `migrations/versions/` | Ревизии схемы: baseline + индексы/FK/снятие уникальности username. |
-| `conftest.py` | Кладёт корень репозитория в `sys.path`, иначе `pytest` (в отличие от `python -m pytest`) не находит `tests.fakes`. |
+| `bot.py` | Entry point and lifecycle. Builds Bot/Dispatcher/Redis/engine, sets up the webhook and middleware, waits for a stop signal, shuts everything down in order. `GracefulRequestHandler` waits for in-flight updates. |
+| `pyproject.toml` | Dependencies (direct ones only) + ruff/mypy/pytest config. Replaced `requirements.txt`. |
+| `Dockerfile` | Multi-stage build on `python:3.11-slim`. The builder installs dependencies into a venv; the runtime gets only the venv + code and runs as non-root. |
+| `docker-compose.yml` | Production stack: nginx, telegram-api-server, postgres, redis, one-shot migrations, the bot. DB/Redis ports on loopback only, log rotation, healthchecks. |
+| `alembic.ini` | Alembic config. `sqlalchemy.url` is deliberately empty — the URL is built from the environment in `migrations/env.py`. |
+| `.env.example` | Template for all 20+ environment variables. |
+| `.dockerignore` | Keeps `.env`, `.git`, caches and tests out of the image. |
+| `nginx/default.conf` | Only `/webhook` is public (keep-alive to the bot). The Bot API proxy and file server are limited to private networks: the server runs with `--allow-unauthorized-updates`, and the bot reaches it directly over the compose network. Masks the token in logs. |
+| `migrations/env.py` | Alembic environment. Always overrides the URL from `load_config()` and swaps `asyncpg` for `psycopg` in online mode. |
+| `migrations/versions/` | Schema revisions: baseline + indexes/FKs/dropping username uniqueness + reference picture URL. |
+| `conftest.py` | Puts the repository root on `sys.path`; otherwise `pytest` (unlike `python -m pytest`) cannot find `tests.fakes`. |
 
-## `tgbot/` — код бота
+## `tgbot/` — the bot
 
-### `tgbot/database/` — слой данных
+### `tgbot/database/` — data layer
 
-| Файл | Ответственность |
+| File | Responsibility |
 |---|---|
-| `database.py` | `Base` — декларативная база SQLAlchemy с универсальным `__repr__`. |
-| `models.py` | Три таблицы: `User` (язык, стиль, премиум, настройки фото), `Profile` (персонаж: внешность/телосложение/одежда/характер/локация/роль), `ProfileMessageHistory` (история диалога). |
-| `orm.py` | Обобщённый `CRUDBase[T]` + репозитории + статический реестр `AsyncORM`. `_get_session()` — единая точка, где открывается сессия **и транзакция**. `iter_all()` — keyset-пагинация для рассылки. |
+| `database.py` | `Base` — SQLAlchemy declarative base with a generic `__repr__`. |
+| `models.py` | Three tables: `User` (language, style, premium, picture settings), `Profile` (the character: appearance/build/clothing/personality/location/role), `ProfileMessageHistory` (chat history). |
+| `orm.py` | Generic `CRUDBase[T]` + repositories + the static `AsyncORM` registry. `_get_session()` is the single place where a session **and a transaction** are opened. `iter_all()` — keyset pagination for the broadcast. |
 
-> **Известная проблема:** `Profile` — единственная модель без репозитория; работа
-> с ней идёт через свободные функции в `services/profile.py`. Два конкурирующих
-> стиля доступа к данным.
+> **Known issue:** `Profile` is the only model without a repository; it is
+> accessed through free functions in `services/profile.py`. Two competing
+> data-access styles.
 
-### `tgbot/handlers/` — обработчики
+### `tgbot/handlers/` — handlers
 
-Порядок регистрации задан в `__init__.py` и **важен**: побеждает первый роутер
-с подходящим обработчиком.
+Registration order is set in `__init__.py` and **matters**: the first router
+with a matching handler wins.
 
-| Файл | Ответственность |
+| File | Responsibility |
 |---|---|
-| `__init__.py` | Упорядоченный `routers_list`. От частного к общему. |
-| `admin.py` | `/admin`, рассылка текста/фото. Фильтр админа на message **и** callback. |
-| `menu.py` | `/menu` и все подменю: язык, профили, премиум, стиль, статистика, сброс, редактирование. Самый большой файл (573 строки). |
-| `premium_grant.py` | `/addpremium <level> <username> <days>`. |
-| `customization.py` | Визард создания персонажа: гейт по подписке на канал, выбор имени, случайный профиль, превью, сохранение. |
-| `customization_body.py` | Подменю телосложения: тип телосложения, рост. |
-| `customization_options.py` | Одежда, характер, локация, роль. Четыре модуля со структурно идентичными обработчиками (86–92 %) свёрнуты в одну таблицу `SCREENS`. |
-| `visual_vnesnost.py` | Подменю внешности: волосы, тон кожи, стиль. Владеет коллбэком `customize_appearance`. |
-| `photo.py` | Триггер генерации фото (по границам слов, только вне FSM) + настройки фото. |
-| `dialogue_continiur.py` | Переключение профилей: показать последние 4 сообщения, «начать новый» / «продолжить». |
-| `style.py` | Кнопка «Начать 🚀» — сбрасывает состояние и показывает список профилей. |
-| `user.py` | Онбординг (`/start`, язык, соглашение) и **основной цикл чата с LLM**. |
-| `fallback.py` | Последний роутер. Отвечает на всё, что никто не разобрал. |
+| `__init__.py` | Ordered `routers_list`, specific to general. |
+| `admin.py` | `/admin`, text/photo broadcast. Admin filter on message **and** callback. |
+| `menu.py` | `/menu` and all submenus: language, profiles, premium, style, stats, reset, editing. The largest file. |
+| `premium_grant.py` | `/addpremium <level> <username|id> <days>`. |
+| `customization.py` | Character wizard: optional channel subscription gate, name, random character, preview, saving. |
+| `customization_body.py` | Build submenu: build type, height. |
+| `customization_options.py` | Clothing, personality, location, role. Four modules with structurally identical handlers (86–92 %) collapsed into one `SCREENS` table. |
+| `visual_vnesnost.py` | Appearance submenu: hair, skin tone, style. Owns the `customize_appearance` callback. |
+| `photo.py` | Picture trigger (word boundaries, outside the FSM only) + picture settings. |
+| `dialogue_continiur.py` | Switching profiles: show the last 4 messages, "start over" / "continue". |
+| `style.py` | The "Start 🚀" button — clears the state and shows the profile list. |
+| `user.py` | Onboarding (`/start`, language, agreement) and the **main LLM chat loop**. |
+| `fallback.py` | The last router. Answers anything nobody else handled. |
 
-### `tgbot/services/` — бизнес-логика и внешние сервисы
+### `tgbot/services/` — business logic and external services
 
-| Файл | Ответственность |
+| File | Responsibility |
 |---|---|
-| `http.py` | **Одна** общая `aiohttp.ClientSession` на процесс с настроенным пулом соединений и таймаутами. Всё исходящее HTTP идёт через неё. |
-| `quotas.py` | Атомарные лимиты фото **и сообщений** в Redis: `try_consume*` резервирует слот через INCR, `release*` возвращает при ошибке, `get_*_usage` — для экрана статистики. Бесплатный тариф — пожизненный счётчик без TTL, премиум — суточный. |
-| `limits.py` | Backpressure: пер-юзерный лок в Redis + семафоры на LLM, промпт и картинки. Сбрасывает нагрузку вместо того, чтобы копить очередь. |
-| `migration.py` | Бутстрап БД: ожидание Postgres, engine с явным пулом, подключение фабрики сессий к `AsyncORM`. Миграции здесь **не** применяются. |
-| `runware.py` | Клиент генерации изображений. Общий SDK под `asyncio.Lock`, переподключение при обрыве, ретрай на упавшем websocket. Потолок параллелизма **не** здесь — он один, в `limits.py` (`IMAGE_CONCURRENCY`). |
-| `openrouter.py` | Единственное место, где настраивается вызов модели: эндпоинт, ключ, заголовки атрибуции, id моделей и параметры сэмплинга — всё из env. Раньше первые три были объявлены дважды (в `user.py` и `prompt_formation.py`), а id моделей были литералами в коде. |
-| `prompt_formation.py` | Вызов OpenRouter для построения SD-промпта. |
-| `image_prompts.py` | Сами системные промпты: общие правила контента + два стиля (аниме/реализм) × два языка. `tests/unit/test_image_prompts.py` проверяет структуру и правила. |
-| `chat.py` | Сценарий чата: короткая транзакция на чтение контекста, короткая на запись хода. Возвращает замороженные DTO, а не ORM-объекты. |
-| `profile.py` | CRUD профилей + указатель активного профиля в Redis + проверка премиума. |
-| `dialog_history.py` | История диалога в БД: запись хода, чтение последних 10, обрезка одним запросом. |
-| `premium.py` | Выдача премиума по username. |
-| `style.py` | Чтение/запись `User.style`. |
-| `broadcaster.py` | Безопасная отправка с обработкой flood-wait + массовая рассылка. |
+| `http.py` | **One** shared `aiohttp.ClientSession` per process with a tuned connection pool and timeouts. All outgoing HTTP goes through it. |
+| `quotas.py` | Atomic picture **and message** quotas in Redis: `try_consume*` reserves a slot with INCR, `release*` gives it back on failure, `get_*_usage` feeds the stats screen. Free tier is a lifetime counter without TTL, premium is daily. |
+| `limits.py` | Backpressure: a per-user lock in Redis + semaphores for LLM, prompt and image calls. Sheds load instead of building a queue. |
+| `migration.py` | Database bootstrap: wait for Postgres, build the engine with an explicit pool, wire the session factory into `AsyncORM`. Migrations are **not** applied here. |
+| `runware.py` | Image generation client. A shared SDK behind `asyncio.Lock`, reconnect on drop, retry on a dead websocket. Every request runs Runware's content check; an image that fails it is never delivered. The concurrency ceiling is **not** here — there is one, in `limits.py` (`IMAGE_CONCURRENCY`). |
+| `openrouter.py` | The single place where a model call is configured: endpoint, key, attribution headers, model ids and sampling — all from env. |
+| `prompt_formation.py` | Calls OpenRouter to build the image prompt. A declined request is never retried: it falls back to a neutral scene built from the profile. |
+| `image_prompts.py` | The system prompts themselves: shared content rules + two styles (anime/realistic) × two languages. `tests/unit/test_image_prompts.py` checks structure and rules. |
+| `chat.py` | Chat flow: a short transaction to read the context, a short one to write the turn. Returns frozen DTOs, not ORM objects. |
+| `profile.py` | Profile CRUD + the active-profile pointer in Redis + premium check. |
+| `dialog_history.py` | Chat history in the database: write a turn, read the last 10, trim in one query. |
+| `premium.py` | Granting premium by username or id. |
+| `style.py` | Read/write `User.style`. |
+| `broadcaster.py` | Safe sending with flood-wait handling + mass broadcast. |
 
-### `tgbot/middlewares/` — сквозная логика
+### `tgbot/middlewares/` — cross-cutting logic
 
-| Файл | Ответственность |
+| File | Responsibility |
 |---|---|
-| `antiduplicate.py` | Дедупликация по `update_id` через `SET NX`. На уровне update. |
-| `config.py` | Инжектит `config` и общий `redis` в данные обработчика. |
-| `database.py` | Get-or-create строки юзера на **каждый** апдейт, кладёт словарь `user` (с уже применённым сроком премиума). Кэшируется в Redis на 60 с; всё, что меняет кэшируемые поля, обязано звать `invalidate_user_cache()`. |
-| `dev.py` | «Только админы в dev-режиме». Заблокированному пользователю отвечает, а не молчит. |
+| `antiduplicate.py` | Deduplication by `update_id` with `SET NX`. On raw updates. |
+| `config.py` | Injects `config` and the shared `redis` into handler data. |
+| `database.py` | Get-or-create the user row on **every** update and pass a `user` dict (with premium expiry already applied). Cached in Redis for 60 s; anything that changes cached fields must call `invalidate_user_cache()`. |
+| `dev.py` | "Admins only in dev mode". A blocked user gets a reply instead of silence. |
 
 ### `tgbot/keyboards/`, `tgbot/misc/`, `tgbot/filters/`
 
-| Файл | Ответственность |
+| File | Responsibility |
 |---|---|
-| `keyboards/inline.py` | Админские, языковые, соглашение, стиль. |
-| `keyboards/menu.py` | Клавиатура главного меню. |
-| `keyboards/photo_settings.py` | Тексты и клавиатуры подменю фото. |
-| `keyboards/profiles.py` | Список/выбор/создание/удаление/редактирование профилей. |
-| `misc/localization.py` | Таблицы строк и опций кастомизации. Обработчики пока пишут `if lang == "ru"` вручную (~145 мест). |
-| `misc/start_message_text.py` | Тексты соглашения и списка профилей. |
-| `misc/welcome_message.py` | Текст после создания профиля. |
-| `misc/language_selected_text.py` | Подтверждение выбора языка. |
-| `misc/states.py` | FSM-группы: `BroadcastState` и `ProfileCustomizationState`. |
-| `filters/admin.py` | `AdminFilter` по списку `ADMINS`. |
-| `filters/chat.py` | `IsPrivate`. Применяется на уровне Dispatcher, то есть ко всем роутерам сразу. |
+| `keyboards/inline.py` | Admin, language, agreement and style keyboards. |
+| `keyboards/menu.py` | Main menu keyboard. |
+| `keyboards/photo_settings.py` | Texts and keyboards of the picture settings. |
+| `keyboards/profiles.py` | List / pick / create / delete / edit profiles. |
+| `misc/branding.py` | Deployment-specific links and contacts from env (support contact, channel, agreement pages). |
+| `misc/localization.py` | String tables and wizard options (ru/en). Handlers still write `if lang == "ru"` inline (~145 places). |
+| `misc/start_message_text.py` | Agreement and profile-list texts. |
+| `misc/welcome_message.py` | Text shown after a character is created. |
+| `misc/language_selected_text.py` | Language confirmation. |
+| `misc/states.py` | FSM groups: `BroadcastState` and `ProfileCustomizationState`. |
+| `filters/admin.py` | `AdminFilter` based on `ADMINS`. |
+| `filters/chat.py` | `IsPrivate`. Applied at the Dispatcher level, so it covers every router. |
 
 ---
 
-## Что ещё не сделано
+## Not done yet
 
-| Проблема | Где | Почему не сейчас |
+| Problem | Where | Why not now |
 |---|---|---|
-| ~145 инлайновых `if lang == "ru"` вместо таблиц в `localization.py` | обработчики | Большой механический рефактор; таблицы уже есть, нужен аккессор |
-| Мёртвая колонка `users.welcome_sent` | схема | Удаление — необратимая миграция, решение за владельцем |
-| `delete_old_profile_messages()` (45 дней) нигде не вызывается | `services/dialog_history.py` | Политика хранения данных, а не баг: таблица и так ограничена 10 строками на профиль |
-| Нет бэкапов Postgres и лимитов ресурсов в compose | инфраструктура | Нужны решения по месту хранения и размеру сервера — см. `DEPLOY.md` |
-| Путь генерации фото не покрыт нагрузочным тестом | `tests/load/` | Нужен стаб websocket-протокола Runware |
-| `Profile` — единственная модель без репозитория | `services/profile.py` | Два стиля доступа к данным сосуществуют |
+| ~145 inline `if lang == "ru"` instead of tables in `localization.py` | handlers | A large mechanical refactor; the tables exist, an accessor is needed |
+| Dead column `users.welcome_sent` | schema | Dropping it is an irreversible migration; the owner decides |
+| `delete_old_profile_messages()` (45 days) is never called | `services/dialog_history.py` | A data retention policy, not a bug: the table is already capped at 10 rows per profile |
+| No Postgres backups or resource limits in compose | infrastructure | Needs decisions on storage and server size — see `DEPLOY.md` |
+| The picture path is not covered by the load test | `tests/load/` | Needs a stub of Runware's websocket protocol |
+| `Profile` is the only model without a repository | `services/profile.py` | Two data-access styles coexist |
 
-## Что изменилось в последнем проходе
+## What changed in the last pass
 
-Безопасность:
+Security:
 
-* `/webhook` больше не принимает неаутентифицированные апдейты — бот **падает**
-  на старте без `WEBHOOK_SECRET` (раньше писал warning и работал дальше);
-* nginx больше не публикует локальный Bot API сервер и раздачу файлов в интернет;
-* `IsPrivate` наконец применён — раньше фильтр существовал, но не был подключён
-  ни к одному роутеру, и бот отвечал на каждое сообщение в любой группе, куда
-  его добавили;
-* `DeveloperMiddleware` перестал быть no-op (обе ветки были одинаковыми), а
-  `IN_DEVELOPMENT` читается как bool, а не как строка — `"false"` была истиной.
+* `/webhook` no longer accepts unauthenticated updates — the bot **refuses to
+  start** without `WEBHOOK_SECRET` (it used to log a warning and carry on);
+* nginx no longer exposes the local Bot API server and file server to the
+  internet;
+* `IsPrivate` is finally applied — the filter existed but was not attached to
+  any router, so the bot answered every message in any group it was added to;
+* `DeveloperMiddleware` is no longer a no-op (both branches were identical),
+  and `IN_DEVELOPMENT` is read as a bool, not a string — `"false"` used to be
+  truthy.
 
-Баги:
+Bugs:
 
-* `UnboundLocalError` в мастере профиля: локальный `import logging` в `except`
-  ломал логгер в начале той же функции;
-* редактирование профиля больше не удаляет и не пересоздаёт строку — оба FK
-  истории каскадные, так что смена одежды стирала всю переписку;
-* квота фото возвращается на **всех** путях отказа (раньше — на двух из четырёх,
-  и сбой генерации промпта молча съедал одно из двух пожизненных фото);
-* лимиты сообщений (25 навсегда / 200 в день) действительно применяются: экран
-  премиума рекламировал их с самого начала, но ничего их не проверяло;
-* экран статистики считает сообщения по тем же ключам Redis, что и списывает
-  хендлер (раньше — по строкам в истории, обрезаемой до 10, так что число не
-  могло дорасти до лимита);
-* язык в переключении профилей берётся из `user`, а не из FSM, который на этом
-  экране пуст, — англоязычные пользователи видели русский.
+* `UnboundLocalError` in the profile wizard: a local `import logging` in an
+  `except` block broke the logger at the top of the same function;
+* editing a profile no longer deletes and re-creates the row — both history
+  FKs cascade, so changing an outfit wiped the whole conversation;
+* the picture quota is returned on **every** failure path (before: on two of
+  four, and a failed prompt silently ate one of the two lifetime pictures);
+* message limits (25 lifetime / 200 per day) are actually enforced: the
+  premium screen advertised them from the start, but nothing checked them;
+* the stats screen counts messages with the same Redis keys the handler spends
+  (it used to count history rows, trimmed to 10, so the number could never
+  reach the limit);
+* the language on the profile-switching screen comes from `user`, not from the
+  FSM, which is empty there — English users saw Russian.
 
-Ёмкость:
+Capacity:
 
-* пул Postgres вынесен в `DB_POOL_SIZE`/`DB_MAX_OVERFLOW` (30+20 вместо жёстких
-  10+10) — именно он упирался при волне регистраций;
-* keep-alive в nginx включён (было `keepalive_timeout 0`, то есть новый TCP на
-  каждый апдейт) и добавлен upstream с keep-alive к боту;
-* сохранение хода диалога — 3 запроса вместо 6;
-* рассылка стримит пользователей keyset-пагинацией, а не грузит всю таблицу.
+* the Postgres pool moved to `DB_POOL_SIZE`/`DB_MAX_OVERFLOW` (30+20 instead
+  of a hard-coded 10+10) — exactly what ran out during a registration wave;
+* nginx keep-alive is on (it was `keepalive_timeout 0`, i.e. a new TCP
+  connection per update) and a keep-alive upstream to the bot was added;
+* saving a chat turn takes 3 queries instead of 6;
+* the broadcast streams users with keyset pagination instead of loading the
+  whole table.
 
-Процесс:
+Process:
 
-* **CI наконец запускает тесты** — 213 штук были написаны и не выполнялись;
-* `F823`/`F841` переведены из advisory в блокирующие: первое поймало реальный баг;
-* добавлены проверки, что секрет вебхука enforced, а Bot API не публичен.
+* **CI finally runs the tests** — 213 of them had been written and never run;
+* `F823`/`F841` moved from advisory to blocking: the first one caught a real
+  bug;
+* checks were added that the webhook secret is enforced and the Bot API is not
+  public.
 
-## Целевая структура
+## Target structure
 
-Переезд идёт по слоям, поток за потоком. Правило импортов: `routers/` знает про
-aiogram; `services/`, `db/`, `clients/` — нет.
+The move happens layer by layer, one flow at a time. Import rule: `routers/`
+knows about aiogram; `services/`, `db/`, `clients/` do not.
 
 ```
 bot/
-  __main__.py     жизненный цикл процесса
-  config.py       единственный источник правды по env
-  runtime.py      AppContext: все пулы и их размеры на одном экране
-  webhook.py      aiohttp-приложение, /healthz, /metrics
-  db/             модели, сессии, репозитории (по одному на агрегат)
-  services/       сценарии; возвращают DTO, не ORM-объекты
-  clients/        openrouter, runware — таймауты, ретраи, лимиты
-  routers/        разобрать апдейт → вызвать сервис → отрисовать ответ
-  keyboards/      чистые функции, ни одного await
-  middlewares/    контекст, юзер (с кэшем), троттлинг, дедуп
+  __main__.py     process lifecycle
+  config.py       the single source of truth for env
+  runtime.py      AppContext: every pool and its size on one screen
+  webhook.py      aiohttp app, /healthz, /metrics
+  db/             models, sessions, repositories (one per aggregate)
+  services/       flows; return DTOs, not ORM objects
+  clients/        openrouter, runware — timeouts, retries, limits
+  routers/        parse the update → call a service → render the reply
+  keyboards/      pure functions, no await
+  middlewares/    context, user (cached), throttling, dedup
   i18n/           t(key, lang)
 ```

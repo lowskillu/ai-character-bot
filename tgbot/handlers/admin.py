@@ -102,7 +102,7 @@ async def receive_broadcast_data(message: Message, state: FSMContext):
 @admin_router.callback_query(BroadcastState.BS2, F.data == "yes")
 async def agree_and_start(call: CallbackQuery, state: FSMContext, bot):
     if not call.message or isinstance(call.message, InaccessibleMessage):
-        await call.answer("Произошла ошибка!")
+        await call.answer("Something went wrong!")
         return
 
     data = await state.get_data()
@@ -165,8 +165,8 @@ async def admin_set_free(message: Message, redis=None):
         await reset_user_quotas(redis, user_id)
 
     await message.answer(
-        "🔴 <b>Режим аккаунта изменен на FREE (Бесплатный)</b>\n"
-        "└─ Все счетчики и лимиты сообщений/фото сброшены!"
+        "🔴 <b>Account switched to FREE</b>\n"
+        "└─ All message and picture counters have been reset!"
     )
 
 
@@ -184,6 +184,6 @@ async def admin_set_prem(message: Message, redis=None):
         await reset_user_quotas(redis, user_id)
 
     await message.answer(
-        "🟢 <b>Режим аккаунта изменен на PREMIUM (Премиум)</b>\n"
-        "└─ Все счетчики и лимиты сообщений/фото сброшены!"
+        "🟢 <b>Account switched to PREMIUM</b>\n"
+        "└─ All message and picture counters have been reset!"
     )

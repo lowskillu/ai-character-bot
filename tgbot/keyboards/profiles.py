@@ -2,7 +2,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from typing import List, Tuple
 
 def get_new_user_keyboard(lang: str = "ru"):
-    """Клавиатура для новичка — только кнопка создания профиля."""
+    """Keyboard for a new user: only the create button."""
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text=("➕ Создать новый" if lang == "ru" else "➕ New profile"), callback_data="profile_create")],
@@ -11,9 +11,9 @@ def get_new_user_keyboard(lang: str = "ru"):
 
 def get_profiles_keyboard(profiles: List[Tuple[int, str]], is_premium: bool, lang: str = "ru"):
     """
-    Клавиатура для выбора профиля.
-    profiles: список (id, название)
-    is_premium: True — до 4 профилей, False — до 2
+    Profile picker.
+    profiles: list of (id, name)
+    is_premium: True allows up to 4 profiles, False up to 2
 
     The two action labels were Russian-only, so this — the first screen an
     English user sees after pressing "Start 🚀" — was half-translated.
@@ -45,11 +45,11 @@ def get_profiles_keyboard(profiles: List[Tuple[int, str]], is_premium: bool, lan
 
 def get_profiles_menu_keyboard(profiles: list, active_profile_id: int, is_premium: bool, lang: str = "ru"):
     """
-    Клавиатура для меню профилей с выделением активного, кнопками создать/удалить/назад.
-    profiles: список (id, название)
-    active_profile_id: id активного профиля
-    is_premium: True — до 4 профилей, False — до 2
-    lang: язык
+    Profile menu: marks the active profile, with create / delete / edit / back.
+    profiles: list of (id, name)
+    active_profile_id: id of the active profile
+    is_premium: True allows up to 4 profiles, False up to 2
+    lang: interface language
     """
     keyboard = []
     for idx, (profile_id, name) in enumerate(profiles, 1):
