@@ -1,0 +1,1498 @@
+{
+  "customization_ru": [
+    [
+      [
+        "👑 Имя",
+        "customize_name"
+      ],
+      [
+        "💇 Внешность",
+        "customize_appearance"
+      ]
+    ],
+    [
+      [
+        "📐 Телосложение",
+        "customize_body"
+      ],
+      [
+        "👕 Одежда",
+        "customize_clothing"
+      ]
+    ],
+    [
+      [
+        "🐱 Характер",
+        "customize_personality"
+      ],
+      [
+        "🌇 Локация",
+        "customize_location"
+      ]
+    ],
+    [
+      [
+        "🎭 Роль",
+        "customize_role"
+      ]
+    ],
+    [
+      [
+        "🎲 Случайный образ",
+        "customize_random"
+      ]
+    ],
+    [
+      [
+        "✅ Завершить настройку",
+        "customize_finish"
+      ]
+    ]
+  ],
+  "name_choice_ru": [
+    [
+      [
+        "Саша",
+        "choose_name_Саша"
+      ],
+      [
+        "Женя",
+        "choose_name_Женя"
+      ]
+    ],
+    [
+      [
+        "Валя",
+        "choose_name_Валя"
+      ],
+      [
+        "Слава",
+        "choose_name_Слава"
+      ]
+    ],
+    [
+      [
+        "Ким",
+        "choose_name_Ким"
+      ],
+      [
+        "Кай",
+        "choose_name_Кай"
+      ]
+    ],
+    [
+      [
+        "Рэй",
+        "choose_name_Рэй"
+      ],
+      [
+        "Нико",
+        "choose_name_Нико"
+      ]
+    ],
+    [
+      [
+        "Робин",
+        "choose_name_Робин"
+      ],
+      [
+        "Сэм",
+        "choose_name_Сэм"
+      ]
+    ],
+    [
+      [
+        "Алекс",
+        "choose_name_Алекс"
+      ],
+      [
+        "Мика",
+        "choose_name_Мика"
+      ]
+    ],
+    [
+      [
+        "Ари",
+        "choose_name_Ари"
+      ],
+      [
+        "Эш",
+        "choose_name_Эш"
+      ]
+    ],
+    [
+      [
+        "Рио",
+        "choose_name_Рио"
+      ],
+      [
+        "Скай",
+        "choose_name_Скай"
+      ]
+    ],
+    [
+      [
+        "🎲 Случайное имя",
+        "random_name"
+      ]
+    ],
+    [
+      [
+        "🔙 Назад",
+        "name_back"
+      ]
+    ]
+  ],
+  "name_choice_selected_ru": [
+    [
+      [
+        "Саша ✅",
+        "choose_name_Саша"
+      ],
+      [
+        "Женя",
+        "choose_name_Женя"
+      ]
+    ],
+    [
+      [
+        "Валя",
+        "choose_name_Валя"
+      ],
+      [
+        "Слава",
+        "choose_name_Слава"
+      ]
+    ],
+    [
+      [
+        "Ким",
+        "choose_name_Ким"
+      ],
+      [
+        "Кай",
+        "choose_name_Кай"
+      ]
+    ],
+    [
+      [
+        "Рэй",
+        "choose_name_Рэй"
+      ],
+      [
+        "Нико",
+        "choose_name_Нико"
+      ]
+    ],
+    [
+      [
+        "Робин",
+        "choose_name_Робин"
+      ],
+      [
+        "Сэм",
+        "choose_name_Сэм"
+      ]
+    ],
+    [
+      [
+        "Алекс",
+        "choose_name_Алекс"
+      ],
+      [
+        "Мика",
+        "choose_name_Мика"
+      ]
+    ],
+    [
+      [
+        "Ари",
+        "choose_name_Ари"
+      ],
+      [
+        "Эш",
+        "choose_name_Эш"
+      ]
+    ],
+    [
+      [
+        "Рио",
+        "choose_name_Рио"
+      ],
+      [
+        "Скай",
+        "choose_name_Скай"
+      ]
+    ],
+    [
+      [
+        "🎲 Случайное имя",
+        "random_name"
+      ]
+    ],
+    [
+      [
+        "🔙 Назад",
+        "name_back"
+      ]
+    ]
+  ],
+  "clothing_ru": [
+    [
+      [
+        "🧥 Свитер и джинсы",
+        "clothing_choose_Loose long-sleeved sweater and jeans"
+      ],
+      [
+        "👔 Рубашка и брюки",
+        "clothing_choose_Long-sleeved shirt and trousers"
+      ]
+    ],
+    [
+      [
+        "🧢 Худи и спортивные брюки",
+        "clothing_choose_Loose hoodie and track pants"
+      ]
+    ],
+    [
+      [
+        "🔙 Назад",
+        "clothing_back"
+      ]
+    ]
+  ],
+  "personality_ru": [
+    [
+      [
+        "🤗 Добрый",
+        "personality_choose_Kind"
+      ],
+      [
+        "🧐 Рассудительный",
+        "personality_choose_Thoughtful"
+      ]
+    ],
+    [
+      [
+        "😄 Весёлый",
+        "personality_choose_Cheerful"
+      ],
+      [
+        "📋 Серьёзный",
+        "personality_choose_Serious"
+      ]
+    ],
+    [
+      [
+        "😎 Уверенный",
+        "personality_choose_Confident"
+      ],
+      [
+        "🌱 Скромный",
+        "personality_choose_Modest and quiet"
+      ]
+    ],
+    [
+      [
+        "⚡ Энергичный",
+        "personality_choose_Energetic"
+      ],
+      [
+        "💬 Разговорчивый",
+        "personality_choose_Talkative"
+      ]
+    ],
+    [
+      [
+        "🧠 Спокойный",
+        "personality_choose_Calm"
+      ]
+    ],
+    [
+      [
+        "🔙 Назад",
+        "personality_back"
+      ]
+    ]
+  ],
+  "location_ru": [
+    [
+      [
+        "🍽️ Кафе",
+        "location_choose_cafe"
+      ],
+      [
+        "🌳 Парк",
+        "location_choose_park"
+      ]
+    ],
+    [
+      [
+        "📚 Библиотека",
+        "location_choose_library"
+      ],
+      [
+        "🌆 Вечерний город",
+        "location_choose_city_evening"
+      ]
+    ],
+    [
+      [
+        "🔙 Назад",
+        "location_back"
+      ]
+    ]
+  ],
+  "role_ru": [
+    [
+      [
+        "🤝 Друг",
+        "role_choose_friend"
+      ],
+      [
+        "☕ Бариста",
+        "role_choose_barista"
+      ]
+    ],
+    [
+      [
+        "📚 Репетитор",
+        "role_choose_tutor"
+      ]
+    ],
+    [
+      [
+        "🔙 Назад",
+        "role_back"
+      ]
+    ]
+  ],
+  "appearance_main_ru": [
+    [
+      [
+        "💇 Волосы",
+        "appearance_hair"
+      ]
+    ],
+    [
+      [
+        "🧬 Цвет кожи",
+        "appearance_skin"
+      ]
+    ],
+    [
+      [
+        "🎭 Стиль",
+        "appearance_style"
+      ]
+    ],
+    [
+      [
+        "🔙 Назад",
+        "appearance_back"
+      ]
+    ]
+  ],
+  "appearance_opts_ru": [
+    [
+      [
+        "🤍 Светлые",
+        "appearance_choose_light"
+      ],
+      [
+        "🤎 Каштановые",
+        "appearance_choose_brown"
+      ]
+    ],
+    [
+      [
+        "🧡 Рыжие",
+        "appearance_choose_red"
+      ],
+      [
+        "🖤 Чёрные",
+        "appearance_choose_black"
+      ]
+    ],
+    [
+      [
+        "🔙 Назад",
+        "customize_appearance"
+      ]
+    ]
+  ],
+  "appearance_opts_sel_ru": [
+    [
+      [
+        "🤍 Светлые ✅",
+        "appearance_choose_light"
+      ],
+      [
+        "🤎 Каштановые",
+        "appearance_choose_brown"
+      ]
+    ],
+    [
+      [
+        "🧡 Рыжие",
+        "appearance_choose_red"
+      ],
+      [
+        "🖤 Чёрные",
+        "appearance_choose_black"
+      ]
+    ],
+    [
+      [
+        "🔙 Назад",
+        "customize_appearance"
+      ]
+    ]
+  ],
+  "body_main_ru": [
+    [
+      [
+        "📐 Телосложение",
+        "body_type"
+      ]
+    ],
+    [
+      [
+        "📏 Рост",
+        "body_height"
+      ]
+    ],
+    [
+      [
+        "🔙 Назад",
+        "body_back"
+      ]
+    ]
+  ],
+  "clothing_sel_ru": [
+    [
+      [
+        "🧥 Свитер и джинсы",
+        "clothing_choose_Loose long-sleeved sweater and jeans"
+      ],
+      [
+        "👔 Рубашка и брюки ✅",
+        "clothing_choose_Long-sleeved shirt and trousers"
+      ]
+    ],
+    [
+      [
+        "🧢 Худи и спортивные брюки",
+        "clothing_choose_Loose hoodie and track pants"
+      ]
+    ],
+    [
+      [
+        "🔙 Назад",
+        "clothing_back"
+      ]
+    ]
+  ],
+  "role_sel_ru": [
+    [
+      [
+        "🤝 Друг ✅",
+        "role_choose_friend"
+      ],
+      [
+        "☕ Бариста",
+        "role_choose_barista"
+      ]
+    ],
+    [
+      [
+        "📚 Репетитор",
+        "role_choose_tutor"
+      ]
+    ],
+    [
+      [
+        "🔙 Назад",
+        "role_back"
+      ]
+    ]
+  ],
+  "menu_ru": [
+    [
+      [
+        "📊 Статистика",
+        "menu_stats"
+      ],
+      [
+        "💎 Премиум",
+        "menu_premium"
+      ]
+    ],
+    [
+      [
+        "🔄 Сбросить",
+        "menu_reset"
+      ],
+      [
+        "🌍 Язык",
+        "menu_language"
+      ]
+    ],
+    [
+      [
+        "📸 Настройки фото",
+        "photo_settings_main"
+      ]
+    ],
+    [
+      [
+        "👥 Профили",
+        "menu_profiles"
+      ]
+    ],
+    [
+      [
+        "💬 Вернуться к диалогу",
+        "menu_back_to_dialog"
+      ]
+    ]
+  ],
+  "reset_ru": [
+    [
+      [
+        "✅ Подтвердить",
+        "reset_confirm"
+      ]
+    ],
+    [
+      [
+        "❌ Отмена",
+        "reset_cancel"
+      ]
+    ]
+  ],
+  "agreement_ru": [
+    [
+      [
+        "✅ Принимаю",
+        "agreement_accept"
+      ]
+    ]
+  ],
+  "style_ru": [
+    [
+      [
+        "🌟 Аниме стиль",
+        "style_anime"
+      ]
+    ],
+    [
+      [
+        "🎭 Реалистичный стиль",
+        "style_realistic"
+      ]
+    ]
+  ],
+  "photo_settings_ru": [
+    [
+      [
+        "🎨 Стиль",
+        "photo_style_menu"
+      ]
+    ],
+    [
+      [
+        "🛠 Параметры",
+        "photo_params_menu"
+      ]
+    ],
+    [
+      [
+        "🔙 Назад",
+        "photo_settings_back_to_menu"
+      ]
+    ]
+  ],
+  "photo_params_ru": [
+    [
+      [
+        "✨ Обработка",
+        "photo_skin_menu_select"
+      ]
+    ],
+    [
+      [
+        "🔙 Назад",
+        "photo_settings_back_to_main"
+      ]
+    ]
+  ],
+  "photo_skin_ru": [
+    [
+      [
+        "✨ Естественная",
+        "photo_skin_choose_natural"
+      ]
+    ],
+    [
+      [
+        "🌸 Мягкая",
+        "photo_skin_choose_soft"
+      ]
+    ],
+    [
+      [
+        "🔙 Назад",
+        "photo_params_back"
+      ]
+    ]
+  ],
+  "photo_style_ru": [
+    [
+      [
+        "🌸 Аниме ✅",
+        "photo_style_choose_anime"
+      ]
+    ],
+    [
+      [
+        "📸 Реализм",
+        "photo_style_choose_realistic"
+      ]
+    ],
+    [
+      [
+        "🔙 Назад",
+        "photo_settings_back_to_main"
+      ]
+    ]
+  ],
+  "profiles_menu_ru": [
+    [
+      [
+        "1) Саша ",
+        "profile_select_1"
+      ]
+    ],
+    [
+      [
+        "2) Alex ",
+        "profile_select_2"
+      ]
+    ],
+    [
+      [
+        "❌ Удалить существующий",
+        "profile_delete"
+      ]
+    ],
+    [
+      [
+        "🎀 Изменить профиль",
+        "edit_profile"
+      ]
+    ],
+    [
+      [
+        "⬅️ Назад",
+        "menu_back_to_dialog"
+      ]
+    ]
+  ],
+  "new_user_ru": [
+    [
+      [
+        "➕ Создать новый",
+        "profile_create"
+      ]
+    ]
+  ],
+  "profiles_pick_ru": [
+    [
+      [
+        "1) Саша",
+        "profile_select_1"
+      ]
+    ],
+    [
+      [
+        "2) Alex",
+        "profile_select_2"
+      ]
+    ],
+    [
+      [
+        "❌ Удалить существующий",
+        "profile_delete"
+      ]
+    ]
+  ],
+  "edit_profile_ru": [
+    [
+      [
+        "1) Саша",
+        "edit_profile_select_1"
+      ]
+    ],
+    [
+      [
+        "2) Alex",
+        "edit_profile_select_2"
+      ]
+    ],
+    [
+      [
+        "⬅️ Назад",
+        "menu_back_to_dialog"
+      ]
+    ]
+  ],
+  "customization_en": [
+    [
+      [
+        "👑 Name",
+        "customize_name"
+      ],
+      [
+        "💇 Appearance",
+        "customize_appearance"
+      ]
+    ],
+    [
+      [
+        "📐 Build",
+        "customize_body"
+      ],
+      [
+        "👕 Clothing",
+        "customize_clothing"
+      ]
+    ],
+    [
+      [
+        "🐱 Personality",
+        "customize_personality"
+      ],
+      [
+        "🌇 Location",
+        "customize_location"
+      ]
+    ],
+    [
+      [
+        "🎭 Role",
+        "customize_role"
+      ]
+    ],
+    [
+      [
+        "🎲 Random Look",
+        "customize_random"
+      ]
+    ],
+    [
+      [
+        "✅ Finish Setup",
+        "customize_finish"
+      ]
+    ]
+  ],
+  "name_choice_en": [
+    [
+      [
+        "Alex",
+        "choose_name_Alex"
+      ],
+      [
+        "Sam",
+        "choose_name_Sam"
+      ]
+    ],
+    [
+      [
+        "Robin",
+        "choose_name_Robin"
+      ],
+      [
+        "Jordan",
+        "choose_name_Jordan"
+      ]
+    ],
+    [
+      [
+        "Taylor",
+        "choose_name_Taylor"
+      ],
+      [
+        "Casey",
+        "choose_name_Casey"
+      ]
+    ],
+    [
+      [
+        "Riley",
+        "choose_name_Riley"
+      ],
+      [
+        "Morgan",
+        "choose_name_Morgan"
+      ]
+    ],
+    [
+      [
+        "Jamie",
+        "choose_name_Jamie"
+      ],
+      [
+        "Charlie",
+        "choose_name_Charlie"
+      ]
+    ],
+    [
+      [
+        "Avery",
+        "choose_name_Avery"
+      ],
+      [
+        "Quinn",
+        "choose_name_Quinn"
+      ]
+    ],
+    [
+      [
+        "Rowan",
+        "choose_name_Rowan"
+      ],
+      [
+        "Skyler",
+        "choose_name_Skyler"
+      ]
+    ],
+    [
+      [
+        "Kai",
+        "choose_name_Kai"
+      ],
+      [
+        "Ash",
+        "choose_name_Ash"
+      ]
+    ],
+    [
+      [
+        "🎲 Random Name",
+        "random_name"
+      ]
+    ],
+    [
+      [
+        "🔙 Back",
+        "name_back"
+      ]
+    ]
+  ],
+  "name_choice_selected_en": [
+    [
+      [
+        "Alex",
+        "choose_name_Alex"
+      ],
+      [
+        "Sam",
+        "choose_name_Sam"
+      ]
+    ],
+    [
+      [
+        "Robin",
+        "choose_name_Robin"
+      ],
+      [
+        "Jordan",
+        "choose_name_Jordan"
+      ]
+    ],
+    [
+      [
+        "Taylor",
+        "choose_name_Taylor"
+      ],
+      [
+        "Casey",
+        "choose_name_Casey"
+      ]
+    ],
+    [
+      [
+        "Riley",
+        "choose_name_Riley"
+      ],
+      [
+        "Morgan",
+        "choose_name_Morgan"
+      ]
+    ],
+    [
+      [
+        "Jamie",
+        "choose_name_Jamie"
+      ],
+      [
+        "Charlie",
+        "choose_name_Charlie"
+      ]
+    ],
+    [
+      [
+        "Avery",
+        "choose_name_Avery"
+      ],
+      [
+        "Quinn",
+        "choose_name_Quinn"
+      ]
+    ],
+    [
+      [
+        "Rowan",
+        "choose_name_Rowan"
+      ],
+      [
+        "Skyler",
+        "choose_name_Skyler"
+      ]
+    ],
+    [
+      [
+        "Kai",
+        "choose_name_Kai"
+      ],
+      [
+        "Ash",
+        "choose_name_Ash"
+      ]
+    ],
+    [
+      [
+        "🎲 Random Name",
+        "random_name"
+      ]
+    ],
+    [
+      [
+        "🔙 Back",
+        "name_back"
+      ]
+    ]
+  ],
+  "clothing_en": [
+    [
+      [
+        "🧥 Sweater and jeans",
+        "clothing_choose_Loose long-sleeved sweater and jeans"
+      ],
+      [
+        "👔 Shirt and trousers",
+        "clothing_choose_Long-sleeved shirt and trousers"
+      ]
+    ],
+    [
+      [
+        "🧢 Hoodie and track pants",
+        "clothing_choose_Loose hoodie and track pants"
+      ]
+    ],
+    [
+      [
+        "🔙 Back",
+        "clothing_back"
+      ]
+    ]
+  ],
+  "personality_en": [
+    [
+      [
+        "🤗 Kind",
+        "personality_choose_Kind"
+      ],
+      [
+        "🧐 Thoughtful",
+        "personality_choose_Thoughtful"
+      ]
+    ],
+    [
+      [
+        "😄 Cheerful",
+        "personality_choose_Cheerful"
+      ],
+      [
+        "📋 Serious",
+        "personality_choose_Serious"
+      ]
+    ],
+    [
+      [
+        "😎 Confident",
+        "personality_choose_Confident"
+      ],
+      [
+        "🌱 Quiet",
+        "personality_choose_Modest and quiet"
+      ]
+    ],
+    [
+      [
+        "⚡ Energetic",
+        "personality_choose_Energetic"
+      ],
+      [
+        "💬 Talkative",
+        "personality_choose_Talkative"
+      ]
+    ],
+    [
+      [
+        "🧠 Calm",
+        "personality_choose_Calm"
+      ]
+    ],
+    [
+      [
+        "🔙 Back",
+        "personality_back"
+      ]
+    ]
+  ],
+  "location_en": [
+    [
+      [
+        "🍽️ Cafe",
+        "location_choose_cafe"
+      ],
+      [
+        "🌳 Park",
+        "location_choose_park"
+      ]
+    ],
+    [
+      [
+        "📚 Library",
+        "location_choose_library"
+      ],
+      [
+        "🌆 City in the evening",
+        "location_choose_city_evening"
+      ]
+    ],
+    [
+      [
+        "🔙 Back",
+        "location_back"
+      ]
+    ]
+  ],
+  "role_en": [
+    [
+      [
+        "🤝 Friend",
+        "role_choose_friend"
+      ],
+      [
+        "☕ Barista",
+        "role_choose_barista"
+      ]
+    ],
+    [
+      [
+        "📚 Tutor",
+        "role_choose_tutor"
+      ]
+    ],
+    [
+      [
+        "🔙 Back",
+        "role_back"
+      ]
+    ]
+  ],
+  "appearance_main_en": [
+    [
+      [
+        "💇 Hair",
+        "appearance_hair"
+      ]
+    ],
+    [
+      [
+        "🧬 Skin tone",
+        "appearance_skin"
+      ]
+    ],
+    [
+      [
+        "🎭 Style",
+        "appearance_style"
+      ]
+    ],
+    [
+      [
+        "🔙 Back",
+        "appearance_back"
+      ]
+    ]
+  ],
+  "appearance_opts_en": [
+    [
+      [
+        "🤍 Light",
+        "appearance_choose_light"
+      ],
+      [
+        "🤎 Brown",
+        "appearance_choose_brown"
+      ]
+    ],
+    [
+      [
+        "🧡 Red",
+        "appearance_choose_red"
+      ],
+      [
+        "🖤 Black",
+        "appearance_choose_black"
+      ]
+    ],
+    [
+      [
+        "🔙 Back",
+        "customize_appearance"
+      ]
+    ]
+  ],
+  "appearance_opts_sel_en": [
+    [
+      [
+        "🤍 Light ✅",
+        "appearance_choose_light"
+      ],
+      [
+        "🤎 Brown",
+        "appearance_choose_brown"
+      ]
+    ],
+    [
+      [
+        "🧡 Red",
+        "appearance_choose_red"
+      ],
+      [
+        "🖤 Black",
+        "appearance_choose_black"
+      ]
+    ],
+    [
+      [
+        "🔙 Back",
+        "customize_appearance"
+      ]
+    ]
+  ],
+  "body_main_en": [
+    [
+      [
+        "📐 Body Type",
+        "body_type"
+      ]
+    ],
+    [
+      [
+        "📏 Height",
+        "body_height"
+      ]
+    ],
+    [
+      [
+        "🔙 Back",
+        "body_back"
+      ]
+    ]
+  ],
+  "clothing_sel_en": [
+    [
+      [
+        "🧥 Sweater and jeans",
+        "clothing_choose_Loose long-sleeved sweater and jeans"
+      ],
+      [
+        "👔 Shirt and trousers ✅",
+        "clothing_choose_Long-sleeved shirt and trousers"
+      ]
+    ],
+    [
+      [
+        "🧢 Hoodie and track pants",
+        "clothing_choose_Loose hoodie and track pants"
+      ]
+    ],
+    [
+      [
+        "🔙 Back",
+        "clothing_back"
+      ]
+    ]
+  ],
+  "role_sel_en": [
+    [
+      [
+        "🤝 Friend ✅",
+        "role_choose_friend"
+      ],
+      [
+        "☕ Barista",
+        "role_choose_barista"
+      ]
+    ],
+    [
+      [
+        "📚 Tutor",
+        "role_choose_tutor"
+      ]
+    ],
+    [
+      [
+        "🔙 Back",
+        "role_back"
+      ]
+    ]
+  ],
+  "menu_en": [
+    [
+      [
+        "📊 Stats",
+        "menu_stats"
+      ],
+      [
+        "💎 Premium",
+        "menu_premium"
+      ]
+    ],
+    [
+      [
+        "🔄 Reset",
+        "menu_reset"
+      ],
+      [
+        "🌍 Language",
+        "menu_language"
+      ]
+    ],
+    [
+      [
+        "📸 Photo Settings",
+        "photo_settings_main"
+      ]
+    ],
+    [
+      [
+        "👥 Profiles",
+        "menu_profiles"
+      ]
+    ],
+    [
+      [
+        "💬 Back to chat",
+        "menu_back_to_dialog"
+      ]
+    ]
+  ],
+  "reset_en": [
+    [
+      [
+        "✅ Confirm",
+        "reset_confirm"
+      ]
+    ],
+    [
+      [
+        "❌ Cancel",
+        "reset_cancel"
+      ]
+    ]
+  ],
+  "agreement_en": [
+    [
+      [
+        "✅ Accept",
+        "agreement_accept"
+      ]
+    ]
+  ],
+  "style_en": [
+    [
+      [
+        "🌟 Anime style",
+        "style_anime"
+      ]
+    ],
+    [
+      [
+        "🎭 Realistic style",
+        "style_realistic"
+      ]
+    ]
+  ],
+  "photo_settings_en": [
+    [
+      [
+        "🎨 Style",
+        "photo_style_menu"
+      ]
+    ],
+    [
+      [
+        "🛠 Parameters",
+        "photo_params_menu"
+      ]
+    ],
+    [
+      [
+        "🔙 Back",
+        "photo_settings_back_to_menu"
+      ]
+    ]
+  ],
+  "photo_params_en": [
+    [
+      [
+        "✨ Finish",
+        "photo_skin_menu_select"
+      ]
+    ],
+    [
+      [
+        "🔙 Back",
+        "photo_settings_back_to_main"
+      ]
+    ]
+  ],
+  "photo_skin_en": [
+    [
+      [
+        "✨ Natural",
+        "photo_skin_choose_natural"
+      ]
+    ],
+    [
+      [
+        "🌸 Soft",
+        "photo_skin_choose_soft"
+      ]
+    ],
+    [
+      [
+        "🔙 Back",
+        "photo_params_back"
+      ]
+    ]
+  ],
+  "photo_style_en": [
+    [
+      [
+        "🌸 Anime ✅",
+        "photo_style_choose_anime"
+      ]
+    ],
+    [
+      [
+        "📸 Realistic",
+        "photo_style_choose_realistic"
+      ]
+    ],
+    [
+      [
+        "🔙 Back",
+        "photo_settings_back_to_main"
+      ]
+    ]
+  ],
+  "profiles_menu_en": [
+    [
+      [
+        "1) Саша ",
+        "profile_select_1"
+      ]
+    ],
+    [
+      [
+        "2) Alex ",
+        "profile_select_2"
+      ]
+    ],
+    [
+      [
+        "❌ Delete profile",
+        "profile_delete"
+      ]
+    ],
+    [
+      [
+        "🎀 Edit profile",
+        "edit_profile"
+      ]
+    ],
+    [
+      [
+        "⬅️ Back",
+        "menu_back_to_dialog"
+      ]
+    ]
+  ],
+  "new_user_en": [
+    [
+      [
+        "➕ New profile",
+        "profile_create"
+      ]
+    ]
+  ],
+  "profiles_pick_en": [
+    [
+      [
+        "1) Саша",
+        "profile_select_1"
+      ]
+    ],
+    [
+      [
+        "2) Alex",
+        "profile_select_2"
+      ]
+    ],
+    [
+      [
+        "❌ Delete profile",
+        "profile_delete"
+      ]
+    ]
+  ],
+  "edit_profile_en": [
+    [
+      [
+        "1) Саша",
+        "edit_profile_select_1"
+      ]
+    ],
+    [
+      [
+        "2) Alex",
+        "edit_profile_select_2"
+      ]
+    ],
+    [
+      [
+        "⬅️ Back",
+        "menu_back_to_dialog"
+      ]
+    ]
+  ]
+}

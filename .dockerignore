@@ -1,0 +1,48 @@
+# Secrets — injected at runtime via env_file, must never land in an image layer
+.env
+.env.*
+!.env.example
+
+# VCS
+.git/
+.gitignore
+.github/
+
+# Dead vendored admin template (373 MB) and orphaned migration stubs
+admin_panel/
+admin_panel_migrations/
+node_modules/
+
+# Python build/runtime artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+venv/
+.venv/
+
+# Build metadata — used to build the image, useless inside it.
+# pyproject.toml and alembic.ini are NOT here: the builder stage installs from
+# the first and the migrations service reads the second.
+Dockerfile
+docker-compose.yml
+.dockerignore
+conftest.py
+
+# Dev tooling and local state
+.idea/
+.vscode/
+tests/
+cache/
+results/
+temp/
+documents/
+db.db
+*.log
+
+# Docs
+README.MD
+README.md
+docs/

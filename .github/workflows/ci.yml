@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install
+        run: pip install -e ".[dev]"
+
+      # The suite needs neither Postgres, Redis nor Telegram — everything is
+      # faked in-process, and it reads no .env. It was written but never wired
+      # up here, so nothing was actually running it.
+      - name: Pytest
+        run: pytest -q
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install tooling
+        run: pip install ruff==0.9.4 mypy==1.14.1
+
+      # Cheapest possible syntax gate: every module must at least parse.
+      - name: Compile all sources
+        run: python -m compileall -q bot.py tgbot migrations
+
+      # The rules that catch a botched refactor rather than a style preference.
+      # Each of these earned its place on a real defect:
+      #   F823 — a local `import logging` in an except block made the
+      #          module-level logger at the top of the same function raise
+      #          UnboundLocalError.
+      #   F403 — `from ... import *` sitting between two explicit imports of the
+      #          same module silently shadowed one of them, which is how a whole
+      #          duplicate copy of the name lists stayed dead without notice.
+      # Both were reported only by the advisory run below, where nobody saw them.
+      - name: Ruff — errors
+        run: ruff check --select E9,F63,F7,F82,F401,F811,F823,F841,F403 --output-format=github .
+
+      - name: Ruff — full ruleset (advisory)
+        run: ruff check --output-format=github .
+        continue-on-error: true
+
+      - name: Ruff format check (advisory)
+        run: ruff format --check .
+        continue-on-error: true
+
+  types:
+    runs-on: ubuntu-latest
+    continue-on-error: true # legacy tree is untyped; advisory until stage 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install mypy==1.14.1
+      - run: mypy tgbot bot.py
+
+  layering:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Guards the stage-2 invariant: a handler that cannot reach a session
+      # cannot hold one open across a network call.
+      - name: No new per-request HTTP or Redis clients
+        run: |
+          if grep -rn "aiohttp.ClientSession()" --include="*.py" tgbot/ \
+             | grep -v "tgbot/services/http.py"; then
+            echo "::error::Build the shared session via tgbot.services.http.get_http_session()"
+            exit 1
+          fi
+          if grep -rn "aioredis.from_url\|redis.asyncio.from_url" --include="*.py" tgbot/; then
+            echo "::error::Use the Redis client injected by ConfigMiddleware"
+            exit 1
+          fi
+
+      # The webhook secret is the only thing standing between a public URL and
+      # forged updates claiming to be an admin.
+      - name: Webhook secret is enforced, not merely warned about
+        run: |
+          if ! grep -q "ALLOW_INSECURE_WEBHOOK" bot.py; then
+            echo "::error::bot.py must refuse to start without WEBHOOK_SECRET"
+            exit 1
+          fi
+
+      # nginx must not put the local Bot API server (which runs with
+      # --allow-unauthorized-updates) back on the public internet.
+      - name: Bot API proxy stays internal
+        run: |
+          if ! grep -q "deny all" nginx/default.conf; then
+            echo "::error::nginx/default.conf must restrict the Bot API proxy and file server"
+            exit 1
+          fi
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t ai-character-bot:ci .

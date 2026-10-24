@@ -1,0 +1,40 @@
+def get_welcome_message(lang: str = "ru") -> str:
+    """Возвращает приветственное сообщение после создания профиля"""
+    if lang == "ru":
+        return (
+            "👋 Добро пожаловать в чат с твоим персонажем!\n\n"
+            "✨ Начни вот так:\n\n"
+            "1️⃣ Привет! Как прошёл твой день?\n"
+            "2️⃣ Посоветуешь интересную книгу? *садится за столик напротив*\n\n"
+            "📝 В звёздочках — действия и обстановка:\n"
+            "🔹 *улыбается*\n"
+            "🔹 *заказывает два чая*\n"
+            "🔹 *показывает фотографию из поездки*\n\n"
+            "📸 Хочешь картинку? Просто скажи:\n"
+            "✅ Покажи []\n"
+            "✅ Скинь фото []\n\n"
+            "💬 Примеры:\n"
+            "— Покажи, как ты читаешь книгу\n"
+            "— Скинь фото, как ты пьёшь кофе\n\n"
+            "💡 Совет: чем точнее ты опишешь, тем интереснее будет ответ 🙂\n\n"
+            "⚙️ Хочешь изменить образ, одежду или характер? Используй команду /menu"
+        )
+    else:  # English
+        return (
+            "👋 Welcome to the chat with your character!\n\n"
+            "✨ Start like this:\n\n"
+            "1️⃣ Hi! How was your day?\n"
+            "2️⃣ Can you recommend a good book? *sits down at the table*\n\n"
+            "📝 Actions and atmosphere in asterisks:\n"
+            "🔹 *smiles*\n"
+            "🔹 *orders two cups of tea*\n"
+            "🔹 *shows a photo from a trip*\n\n"
+            "📸 Want a picture? Just say:\n"
+            "✅ Show []\n"
+            "✅ Send photo []\n\n"
+            "💬 Examples:\n"
+            "— Show how you read a book\n"
+            "— Send photo of you drinking coffee\n\n"
+            "💡 Tip: the more precisely you describe it, the more interesting the reply 🙂\n\n"
+            "⚙️ Want to change appearance, clothes or character? Use the /menu command"
+        )

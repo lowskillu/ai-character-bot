@@ -1,0 +1,80 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-character-bot"
+version = "0.1.0"
+description = "Telegram bot with AI characters"
+requires-python = ">=3.11,<3.12"
+
+# Only direct dependencies are listed. Transitive ones (yarl, multidict, attrs,
+# greenlet, pydantic-core, Mako, MarkupSafe, marshmallow, certifi, ...) are
+# resolved by pip and were removed from the old requirements.txt, where they had
+# been pinned by hand and drifted.
+dependencies = [
+    "aiogram==3.3.0",
+    "aiohttp==3.9.3",
+
+    # DB. asyncpg drives the app; psycopg drives Alembic's sync connection,
+    # which tgbot/services/migration.py builds as postgresql+psycopg://
+    "SQLAlchemy[asyncio]==2.0.28",
+    "asyncpg==0.29.0",
+    "psycopg[binary]==3.1.18",
+    "alembic==1.13.1",
+
+    "redis==5.0.2",
+    "environs==9.5.0",
+    # Not a stray transitive pin: environs 9.5.0 reads ma.__version_info__,
+    # which marshmallow 4 removed, so it raises AttributeError at import time.
+    # The old requirements.txt happened to pin marshmallow==3.21.1 and hid this.
+    "marshmallow<4",
+    "betterlogging==0.2.1",
+
+    # Pinned to the version pip actually resolved; it was unpinned before, so
+    # builds were not reproducible.
+    "runware==0.5.24",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.4",
+    "pytest-asyncio==0.25.2",
+    "ruff==0.9.4",
+    "mypy==1.14.1",
+]
+
+# Dropped from the old requirements.txt:
+#   pathlib==1.0.1   a PyPI backport that shadows the stdlib module on Python 3
+#   redis>=4.2.0     duplicate of the redis==5.0.2 pin, conflicting
+#   unrar, mega.py, pika, requests, six, tenacity, pycryptodome, aiofiles
+#                    verified unused: no import of any of them anywhere in the tree
+
+# Explicit, because flat-layout auto-discovery sees migrations/, nginx/, docs/…
+# at the top level and aborts with "Multiple top-level packages discovered".
+[tool.setuptools.packages.find]
+include = ["tgbot*"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "ASYNC", "T20"]
+ignore = [
+    "E501",  # line length is handled by the formatter
+    "B008",  # function call in default arg — common and fine in aiogram filters
+]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+# Ramp these up per-package as the refactor lands; the legacy tree is untyped.
+check_untyped_defs = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]

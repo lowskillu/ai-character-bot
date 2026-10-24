@@ -1,0 +1,169 @@
+# Shared log rotation. Docker's json-file driver is unbounded by default, and
+# this app logs heavily — without this the host disk fills up.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  nginx:
+    image: nginx:1.21-alpine
+    restart: unless-stopped
+    logging: *default-logging
+    depends_on:
+      telegram-api-server:
+        condition: service_started
+      tg_bot:
+        # Wait for /healthz rather than merely for the process to exist, so the
+        # first webhook delivery cannot arrive before Postgres and Redis are
+        # reachable — the bot answers 200 to Telegram before handling anything,
+        # so an update lost that way is lost silently.
+        condition: service_healthy
+    ports:
+      - "80:80"
+    volumes:
+      - telegram-bot-api-data:/var/lib/telegram-bot-api
+      - ./nginx:/etc/nginx/conf.d/
+
+  telegram-api-server:
+    image: aiogram/telegram-bot-api:latest
+    restart: unless-stopped
+    logging: *default-logging
+    env_file:
+      - .env
+    volumes:
+      - telegram-bot-api-data:/var/lib/telegram-bot-api
+    # No published port: nginx reaches it over the compose network.
+    # TODO(stage-0): confirm --allow-unauthorized-updates is a real flag
+    #   (`docker run --rm aiogram/telegram-bot-api --help`) — it is absent from
+    #   the tdlib docs and may be silently ignored. Drop it if unrecognised.
+    command: ["--allow-unauthorized-updates", "--http-port=8081"]
+
+  postgres_db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    logging: *default-logging
+    container_name: postgres-container
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    # The bot's pool is DB_POOL_SIZE + DB_MAX_OVERFLOW (30+20 by default) and
+    # the migrations job takes a couple more. The 100 default leaves little
+    # room to raise the pool during a registration wave, which is the one time
+    # it matters.
+    command: ["postgres", "-c", "max_connections=200"]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # Bound to loopback only. Previously 0.0.0.0:5432 — the database was
+    # reachable from the whole internet on a public VPS.
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    logging: *default-logging
+    container_name: redis-container
+    # noeviction is deliberate: this Redis holds FSM state and photo quota
+    # counters, and silently evicting either corrupts user sessions.
+    # appendonly + a volume so a restart does not wipe every active profile.
+    command:
+      - redis-server
+      - --requirepass
+      - ${REDIS_PASSWORD}
+      - --maxmemory
+      - 512mb
+      - --maxmemory-policy
+      - noeviction
+      - --appendonly
+      - "yes"
+    env_file:
+      - .env
+    volumes:
+      - redis_data:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    # REDIS_PASSWORD must be non-empty: `--requirepass ""` leaves this Redis
+    # unauthenticated, and it holds FSM state and every quota counter. The port
+    # mapping is loopback-only, so an empty password is no longer reachable from
+    # the internet, but it still exposes session state to anything on the host.
+    # The fallback branch below exists only so a misconfigured stack comes up
+    # and says so, rather than deadlocking on a failed healthcheck.
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - redis-cli -a "$${REDIS_PASSWORD}" --no-auth-warning ping 2>/dev/null | grep -q PONG
+          || redis-cli ping 2>/dev/null | grep -q PONG
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-shot migration job. The bot no longer autogenerates or applies
+  # migrations at startup — that could emit DROP COLUMN against live data and
+  # raced across replicas.
+  migrations:
+    image: "bot"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: "no"
+    logging: *default-logging
+    env_file:
+      - .env
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+    command: ["alembic", "upgrade", "head"]
+
+  tg_bot:
+    image: "bot"
+    restart: unless-stopped
+    stop_signal: SIGINT
+    stop_grace_period: 45s
+    logging: *default-logging
+    container_name: tracker_bot-container
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # The `- .:/app` bind mount is gone: it shadowed the image, so the running
+    # code was whatever sat on the host disk rather than what was built.
+    env_file:
+      - .env
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      telegram-api-server:
+        condition: service_started
+      migrations:
+        condition: service_completed_successfully
+    # No published port: nginx proxies /webhook over the compose network.
+    #
+    # /healthz returns 503 when Postgres or Redis is unreachable, so this is a
+    # real dependency check rather than a liveness ping. No curl in the slim
+    # image, hence urllib — urlopen raises on a 503, which is the failure we
+    # want. start_period covers wait_for_database.
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:80/healthz', timeout=5)
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  telegram-bot-api-data:
+    driver: "local"
+  postgres_data:
+  redis_data:
