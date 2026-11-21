@@ -1,28 +1,32 @@
 # Load tests
 
-Test bench, results and the defects they found. Runs from 2026-08-07/08.
+Test bench, results and the defects they found. The stub-based runs are from
+2026-08-07/08; the first test below is older (summer 2025).
 
-## First test: the synchronous version
+## First test: the synchronous version (summer 2025)
 
-The first version of the bot processed updates synchronously: while one update
-was waiting for a response (from the database or the model), all the others
-waited in line.
+The first version of the bot was written with pyTelegramBotAPI and processed
+updates synchronously: while one update was waiting for a response (from Redis,
+the Telegram API or the model), all the others waited in line. That version is
+not in this repository.
 
 To test it I used a third-party traffic service that sent the bot about 6,000
 `/start` commands from different accounts.
 
-| version | time to process 6,000 `/start` |
-|---|---|
-| synchronous | about 4 hours |
-| asynchronous (aiohttp) | about 3 minutes |
+| version | how the load was sent | time to process 6,000 `/start` |
+|---|---|---|
+| synchronous (pyTelegramBotAPI) | third-party traffic service | about 4 hours |
+| asynchronous (aiogram 3) | test script | about 3 minutes |
 
 The synchronous version did not crash and barely used the CPU (up to 3 %);
 every request simply waited for the previous one. My own `/start`, sent during
 the test, got a reply after about 4 hours.
 
-The asynchronous result was limited by my machine's resources and the speed of
-the service, not by the bot's code. That is why I moved on to the reproducible
-stub-based tests described below.
+After that I rebuilt the bot on aiogram 3 and repeated the same load, 6,000
+`/start` commands, this time from a test script written by an AI assistant
+instead of the traffic service. The two numbers are therefore not a
+like-for-like measurement: the requests were delivered in a different way.
+That is why I moved on to the reproducible stub-based tests described below.
 
 ## Test bench
 
